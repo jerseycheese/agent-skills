@@ -31,6 +31,30 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 
 The `description` field is what the agent reads to decide whether to invoke the skill — keep trigger phrases concrete and current.
 
-## Use
+## Install
 
-Copy or symlink a skill directory into the agent's skills path. To propagate the same skill across Claude Code, Codex, Gemini CLI, and `.agents/skills` in one pass, use [skill-parity](skill-parity/SKILL.md).
+Each agent looks for skills in a specific directory. Copy or symlink the skill folder (the whole thing, not just `SKILL.md`) into the right path for whichever tool you're using.
+
+| Tool | User-level (available everywhere) | Project-level (this repo only) |
+| --- | --- | --- |
+| Claude Code | `~/.claude/skills/<skill-name>/` | `.claude/skills/<skill-name>/` |
+| Codex | `~/.agents/skills/<skill-name>/` | `.agents/skills/<skill-name>/` |
+| Gemini CLI | `~/.gemini/skills/<skill-name>/` or `~/.agents/skills/<skill-name>/` | `.gemini/skills/<skill-name>/` or `.agents/skills/<skill-name>/` |
+
+The `.agents/skills` path is the interoperable spot — Codex and Gemini both read from it, so it's the path to pick if you want one copy to cover both.
+
+Quick install for a single skill in Claude Code:
+
+```bash
+cp -r kiss ~/.claude/skills/
+```
+
+Or symlink if you want updates to flow back to this repo automatically:
+
+```bash
+ln -s "$(pwd)/kiss" ~/.claude/skills/kiss
+```
+
+If you're juggling all three tools, the [skill-parity](skill-parity/SKILL.md) skill handles copying, updating, and pruning across every provider path in one pass — that's the path worth taking if you're maintaining more than a couple of skills.
+
+After installing, restart the agent (or run `/skills reload` in Gemini) so the new skill is picked up.
