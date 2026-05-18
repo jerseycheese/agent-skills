@@ -463,4 +463,4 @@ Track these outcomes:
 - Intelligent test selection saves significant time — a focused run on changed files beats the full suite for day-to-day work
 - Dev server protection prevents a common class of test environment failures
 - Integration with the `test-fix` skill prevents debugging spirals
-- **AeroSpace tiling**: When running headed visual tests (`test:visual:headed`), AeroSpace will tile the browser window, constraining its viewport. Run `aerospace layout floating` after the window appears to prevent viewport-dependent test failures from mismatched breakpoints.
+- **macOS tiling window managers**: When running headed visual tests (`test:visual:headed`), tiling window managers (AeroSpace, yabai, Amethyst, etc.) will constrain the browser window's viewport. Float the window after it appears using the WM's float command to prevent viewport-dependent test failures from mismatched breakpoints.

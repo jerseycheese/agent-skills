@@ -36,5 +36,5 @@ description: >
 ## Notes
 - Use `bdg status` or `bdg peek` to inspect without stopping.
 - Use `bdg --no-headless` when you need a visible browser window.
-- **AeroSpace tiling**: When using `--no-headless`, AeroSpace will tile the browser window, constraining its viewport to whatever space the tiling layout assigns. Run `aerospace layout floating` after the window appears to free it from tiling constraints. Without this, viewport-dependent CSS (media queries, responsive layouts) may not match expected breakpoints.
+- **macOS tiling window managers**: When using `--no-headless`, tiling window managers (AeroSpace, yabai, Amethyst, etc.) will constrain the browser window's viewport to whatever space the layout assigns. Float the window after it appears using the WM's float command. Without this, viewport-dependent CSS (media queries, responsive layouts) may not match expected breakpoints.
 - For full page snapshots or complex automation, use Chrome DevTools MCP.

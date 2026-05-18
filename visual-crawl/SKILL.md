@@ -16,7 +16,7 @@ Randomized visual QA using `bdg` (browser-debugger-cli). Opens the project, craw
 
 - `bdg` installed globally (`npm install -g browser-debugger-cli@alpha`)
 - Project dev server running (know the URL and port)
-- AeroSpace users: after `--no-headless`, run `aerospace layout floating` to free viewport
+- macOS tiling WM users (AeroSpace, yabai, etc.): after `--no-headless`, float the browser window to free its viewport
 
 ## Invocation
 
