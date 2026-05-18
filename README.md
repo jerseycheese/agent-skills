@@ -1,6 +1,6 @@
-# agent-skills — Claude Code skills
+# agent-skills
 
-A collection of skills for [Claude Code](https://claude.com/claude-code). Each skill lives in its own directory with a single `SKILL.md` whose frontmatter tells Claude when to invoke it and what to do.
+A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and any tool that reads a shared `.agents/skills` directory. Each skill lives in its own directory with a single `SKILL.md` whose frontmatter tells the agent when to invoke it and what to do.
 
 ## Skills
 
@@ -29,8 +29,8 @@ A collection of skills for [Claude Code](https://claude.com/claude-code). Each s
   SKILL.md    # frontmatter (name, description) + body (the actual instructions)
 ```
 
-The `description` field is what Claude reads to decide whether to invoke the skill — keep trigger phrases concrete and current.
+The `description` field is what the agent reads to decide whether to invoke the skill — keep trigger phrases concrete and current.
 
 ## Use
 
-Copy or symlink a skill directory into your Claude Code skills path. To propagate the same skill to Codex, Gemini CLI, or a shared `.agents/skills` location, use [skill-parity](skill-parity/SKILL.md).
+Copy or symlink a skill directory into the agent's skills path. To propagate the same skill across Claude Code, Codex, Gemini CLI, and `.agents/skills` in one pass, use [skill-parity](skill-parity/SKILL.md).
