@@ -121,3 +121,7 @@ Not testing (save for later or explicitly out of scope):
 ## 6. Flag anything unclear
 
 If the issue has ambiguous requirements, call them out explicitly rather than assuming. Ask the user to clarify before they start implementing — it's cheaper to resolve ambiguity now than mid-implementation.
+
+## 7. Handing off to implementation
+
+Once the spec is confirmed and ambiguity is resolved, suggest driving the build with `/goal` instead of manual turn-by-turn iteration — the success criteria above become the completion condition, e.g. `/goal "issue #N: all success-criteria checkboxes met, tests green, PR open"`. A separate evaluator decides when it's actually done.

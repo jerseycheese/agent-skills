@@ -12,6 +12,17 @@ description: >
 
 Keep skills aligned across Claude Code, Codex, Gemini CLI, and the shared Agent Skills layout. Treat Claude as canon only when the user has made that explicit or recent audit context shows Claude is the cleaned source of truth.
 
+## Canonical source: the agent-skills repo (push-based)
+
+The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`), which is also a Claude Code plugin marketplace (`jack-skills` -> plugin `workflow-skills`). The intended flow is:
+
+1. Edit a skill once in the repo.
+2. `git push`.
+3. Claude Code picks it up via `claude plugin marketplace update` (or restart) — no manual copy into `~/.claude/skills/`.
+4. Codex and Gemini hydrate `~/.agents/skills/` from the same repo via the copy/symlink paths below (or the `find-skills` installer).
+
+So prefer editing in the repo and pushing over hand-copying between provider dirs. The legacy `~/.claude/skills/` copies remain only as a fallback until the marketplace plugin is confirmed loading; once verified, they can be removed to avoid duplicate definitions. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
+
 ## Research-first rule
 
 Before adding, editing, pruning, or syncing Codex/Gemini skills, verify current official guidance. Do this even if this skill contains advice that seems current.
@@ -54,16 +65,14 @@ Current docs center the shared Agent Skills layout:
 - Workspace: `.agents/skills/<skill-name>/SKILL.md`
 - Admin: `/etc/codex/skills/<skill-name>/SKILL.md` only if requested
 
-For existing installations that already use them, keep compatibility mirrors in:
-- User legacy mirror: `$CODEX_HOME/skills/<skill-name>/SKILL.md` or `~/.codex/skills/<skill-name>/SKILL.md`
-- Workspace legacy mirror: `.codex/skills/<skill-name>/SKILL.md`
+Do not mirror to `~/.codex/skills/` — Codex loads both that path and `~/.agents/skills/` simultaneously, which produces duplicates in the loaded prompt. The one exception is `~/.codex/skills/.system/`, which holds Codex's bundled defaults — never touch it.
 
 ### Gemini CLI
 
-- User: `~/.gemini/skills/<skill-name>/SKILL.md` or `~/.agents/skills/<skill-name>/SKILL.md`
-- Workspace: `.gemini/skills/<skill-name>/SKILL.md` or `.agents/skills/<skill-name>/SKILL.md`
+- User: `~/.agents/skills/<skill-name>/SKILL.md` (preferred), or `~/.gemini/skills/<skill-name>/SKILL.md` only if it already exists
+- Workspace: `.agents/skills/<skill-name>/SKILL.md` (preferred), or `.gemini/skills/<skill-name>/SKILL.md` only if it already exists
 
-Gemini uses `.agents/skills` as an interoperable alias. Within the same tier, `.agents/skills` takes precedence over `.gemini/skills`.
+Gemini uses `.agents/skills` as an interoperable alias. Within the same tier, `.agents/skills` takes precedence over `.gemini/skills`. Default new skills to `.agents/skills`; only touch `.gemini/skills` when an existing install already lives there.
 
 ## File and metadata rules
 
@@ -90,7 +99,7 @@ Gemini uses `.agents/skills` as an interoperable alias. Within the same tier, `.
 
 ### Gemini CLI
 
-- Prefer `.agents/skills` plus `.gemini/skills` mirrors when maintaining both interoperability and current Gemini installs.
+- Prefer `.agents/skills` for new skills. Only write to `.gemini/skills` if an existing install already uses it.
 - Validate with `/skills reload` or `gemini skills list` when available.
 - If Gemini's creation or validation scripts are available in the local CLI checkout, use them for new skills.
 - Remember that Gemini asks for consent before activating a skill and grants access to the whole skill directory after approval.
@@ -100,8 +109,8 @@ Gemini uses `.agents/skills` as an interoperable alias. Within the same tier, `.
 1. Research current official Codex/Gemini guidance first.
 2. Normalize the source skill: exact `SKILL.md`, valid frontmatter, focused trigger description, and clean resource folders.
 3. Copy the full skill directory, including `scripts/`, `references/`, `assets/`, and provider metadata.
-4. Write shared Codex/Gemini copies to `.agents/skills` when the skill should be interoperable.
-5. Maintain provider-specific mirrors (`.codex/skills`, `.gemini/skills`, user equivalents) when they already exist or when the user asks for them.
+4. Write shared Codex/Gemini copies to `.agents/skills` — this is the canonical mirror for both providers.
+5. Do not mirror to `.codex/skills` (causes duplicate skill loads in Codex). Only touch `.gemini/skills` if an existing install already uses it.
 6. Prune stale provider mirrors only when the source canon and ownership are clear.
 7. Preserve intentional provider-specific deviations only after confirming the reason.
 8. Verify inventory and content parity with hashes across every target scope.
@@ -116,5 +125,5 @@ Gemini uses `.agents/skills` as an interoperable alias. Within the same tier, `.
 - [ ] Long reference content is moved out of `SKILL.md`.
 - [ ] Scripts are deterministic, scoped, and do not expose secrets.
 - [ ] Shared `.agents/skills` copy exists when interoperability is intended.
-- [ ] Legacy provider mirrors are updated or intentionally left alone.
+- [ ] No copies written to `~/.codex/skills/` (Codex's `.system/` dir is left untouched).
 - [ ] Hash parity verified for all intended mirrors.

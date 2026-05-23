@@ -9,6 +9,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[ci-fix-with-memory](ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
 - **[cyoa](cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
 - **[dead-code-cleanup](dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
+- **[drupal-mental-model](drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
 - **[ds-guard](ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
 - **[github-screenshot](github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
 - **[kiss](kiss/SKILL.md)** — Strip a diff down to the minimum surface needed for its goal. Drops the "while I'm here" extras.
@@ -21,6 +22,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[test-workflow](test-workflow/SKILL.md)** — Pick and run the right suite (unit, E2E, visual, CSS lint) after a source edit, before commit.
 - **[visual-crawl](visual-crawl/SKILL.md)** — Crawl the running app at random breakpoints, screenshot regressions, check token consistency.
 - **[worktree-enhanced](worktree-enhanced/SKILL.md)** — Set up a git worktree with branch, dev-server detection, and project-specific setup.
+- **[wrap-it-up](wrap-it-up/SKILL.md)** — Close out a chat with a tight summary and a sweep of related context files (memory, plans, status, logs).
 
 ## Layout
 
@@ -56,5 +58,16 @@ ln -s "$(pwd)/kiss" ~/.claude/skills/kiss
 ```
 
 If you're juggling all three tools, the [skill-parity](skill-parity/SKILL.md) skill handles copying, updating, and pruning across every provider path in one pass — that's the path worth taking if you're maintaining more than a couple of skills.
+
+### Claude Code via marketplace (no manual copy)
+
+This repo is also a Claude Code plugin marketplace, so Claude can install every skill at once and pull updates with a `git push` instead of a manual copy:
+
+```bash
+claude plugin marketplace add jerseycheese/agent-skills
+claude plugin install workflow-skills@jack-skills
+```
+
+After that, `claude plugin marketplace update` (or a restart) picks up new commits. Codex and Gemini still use the copy/symlink paths above; this repo stays the single source for all of them.
 
 After installing, restart the agent (or run `/skills reload` in Gemini) so the new skill is picked up.

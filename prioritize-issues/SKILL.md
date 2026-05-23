@@ -168,3 +168,7 @@ Work on #[NUMBER]. [One sentence on why this one over the others right now.]
 ```
 
 Leave out emojis. Keep the output scannable — the user will skim it to make a final call.
+
+## 8. Handing off to implementation
+
+Once a candidate is picked, suggest driving the build with `/goal` rather than manual turn-by-turn iteration — e.g. `/goal "issue #N acceptance criteria met, PR open, CI green"`. A separate evaluator decides when it's done, so the run doesn't need babysitting. For working several candidates at once, kick them off as background sessions (`claude --bg`) and watch them in Agent View (`claude agents`).

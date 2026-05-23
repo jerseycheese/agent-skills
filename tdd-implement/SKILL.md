@@ -118,3 +118,9 @@ When a test is failing and you're not sure why:
 3. Is the acceptance criterion itself unclear? Ask before assuming.
 
 Never modify a test just to make it pass. A passing test that doesn't validate the right thing is worse than a failing one — it gives false confidence.
+
+---
+
+## Running the loop with `/goal`
+
+The red-green-refactor cycle is a natural fit for `/goal` once the Step 2 test plan is confirmed: the loop has a crisp, evaluator-checkable completion condition, e.g. `/goal "all MVP tests green, build clean, lint clean, no debug statements left"`. Let it iterate across turns rather than babysitting each red-to-green step — just keep the "never rig a test to pass" rule above as the hard constraint.

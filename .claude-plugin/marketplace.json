@@ -1,0 +1,47 @@
+{
+  "name": "jack-skills",
+  "owner": {
+    "name": "Jack Haas"
+  },
+  "plugins": [
+    {
+      "name": "workflow-skills",
+      "source": "./",
+      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code cleanup, worktree setup, and session wrap-up skills.",
+      "strict": false,
+      "keywords": [
+        "workflow",
+        "skills",
+        "testing",
+        "code-review",
+        "issue-triage"
+      ],
+      "license": "MIT",
+      "skills": [
+        "./analyze-issue",
+        "./browser-debugger-cli",
+        "./ci-fix-with-memory",
+        "./cyoa",
+        "./dead-code-cleanup",
+        "./drupal-mental-model",
+        "./ds-guard",
+        "./github-screenshot",
+        "./kiss",
+        "./post-merge",
+        "./pr-review-fix-pipeline",
+        "./prioritize-issues",
+        "./skill-parity",
+        "./tdd-implement",
+        "./test-fix",
+        "./test-workflow",
+        "./visual-crawl",
+        "./worktree-enhanced",
+        "./wrap-it-up"
+      ]
+    }
+  ],
+  "metadata": {
+    "description": "Hand-authored agent workflow skills shared across Claude Code, Codex, and Gemini.",
+    "version": "1.0.0"
+  }
+}

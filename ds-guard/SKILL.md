@@ -18,6 +18,8 @@ Invoke this skill automatically whenever:
 
 Do NOT wait for the user to ask. Run as part of the normal post-edit flow for any styling change.
 
+A `PostToolUse` hook (`~/.claude/hooks/ds-guard-trigger.py`, wired in `~/.claude/settings.json`) now fires deterministically on every styling-file edit and injects a reminder, so the trigger no longer depends on this description matching. Effort gating: at `high`/`xhigh`/`max` run the full audit against the token inventory and showcase (Steps 1+); at lower effort a quick spot-check of the diff's hardcoded values is enough.
+
 # DS Guard — Design System Enforcement
 
 ## Purpose
