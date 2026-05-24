@@ -1,11 +1,56 @@
 ---
 name: post-merge
-description: Runs the post-merge workflow after a PR is merged. Phase 1 closes the loop on linked GitHub issues (posts a completion comment, marks acceptance criteria done, closes the issue if fully addressed). Phase 2 recommends the single best next issue to work on, scoring all open issues by value, effort, and age. Invoke whenever the user says a PR was merged — "merged PR #42", "just merged the auth fix", "PR is merged", "I merged #123".
+description: Runs the post-merge workflow after a PR is merged. Phase 0 syncs the correct base branch and deletes the merged branch and its worktree so later work never starts from stale state. Phase 1 closes the loop on linked GitHub issues (posts a completion comment, marks acceptance criteria done, closes the issue if fully addressed). Phase 2 recommends the single best next issue to work on, scoring all open issues by value, effort, and age. Invoke whenever the user says a PR was merged — "merged PR #42", "just merged the auth fix", "PR is merged", "I merged #123".
 ---
 
 # Post-Merge Workflow
 
-Two phases: tidy up the issues the PR addressed, then recommend what to do next.
+Three phases: sync and clean the working tree, tidy up the issues the PR addressed, then recommend what to do next.
+
+## Phase 0: Sync and Clean the Working Tree
+
+Do this first. Most post-merge rework comes from the next task starting against a stale base branch or a leftover feature branch/worktree — clean it up now while you have the context.
+
+### 1. Find the base and head branches
+
+Don't assume `main`. Read what the PR actually merged into:
+
+```bash
+gh pr view [NUMBER] --json number,title,baseRefName,headRefName,mergedAt
+```
+
+`baseRefName` is the branch to sync (often `develop` or `main`); `headRefName` is the merged feature branch to delete.
+
+### 2. Sync the base branch
+
+```bash
+git fetch --prune
+git checkout [BASE_BRANCH]
+git pull --ff-only
+```
+
+If your current checkout is a worktree pinned to the merged feature branch, you can't switch it to the base — leave it and handle the worktree in step 3.
+
+### 3. Delete the merged branch and its worktree
+
+```bash
+git worktree list                    # find any worktree holding the feature branch
+git worktree remove [WORKTREE_PATH]  # only if it lives in a worktree
+git branch -d [HEAD_BRANCH]          # safe delete — refuses if not actually merged
+```
+
+Use lowercase `git branch -d`; it only deletes branches that are fully merged. Don't reach for `-D` unless you've confirmed the work really landed. `git worktree remove` refuses to drop a worktree with uncommitted changes — don't `--force` past that without checking what's there first. If the project has a prune-merged-branches helper, use it (dry-run, then apply); those scripts typically skip `develop`/`main`/`release/*` and worktree-held branches.
+
+### 4. Confirm clean state
+
+```bash
+git status
+git branch --show-current
+```
+
+You want to be on the synced base branch, working tree clean, with the feature branch gone. Now move to Phase 1.
+
+---
 
 ## Phase 1: Issue Cleanup
 

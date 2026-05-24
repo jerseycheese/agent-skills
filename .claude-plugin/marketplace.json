@@ -7,7 +7,7 @@
     {
       "name": "workflow-skills",
       "source": "./",
-      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code cleanup, worktree setup, and session wrap-up skills.",
+      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code cleanup, code-health audits, worktree setup, and session wrap-up skills.",
       "strict": false,
       "keywords": [
         "workflow",
@@ -21,6 +21,7 @@
         "./analyze-issue",
         "./browser-debugger-cli",
         "./ci-fix-with-memory",
+        "./code-health-audit",
         "./cyoa",
         "./dead-code-cleanup",
         "./drupal-mental-model",
