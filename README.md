@@ -65,9 +65,11 @@ This repo is also a Claude Code plugin marketplace, so Claude can install every 
 
 ```bash
 claude plugin marketplace add jerseycheese/agent-skills
-claude plugin install workflow-skills@jack-skills
+claude plugin install workflow-skills@jerseycheese-skills
 ```
 
 After that, `claude plugin marketplace update` (or a restart) picks up new commits. Codex and Gemini still use the copy/symlink paths above; this repo stays the single source for all of them.
+
+Installed skills are namespaced as `workflow-skills:<name>`. They're model-invoked — Claude runs them automatically when your request matches the skill's description, so they won't show up in the `/` slash-command menu. Browse them with `/skills`, or just describe the task (e.g. "prioritize my issues").
 
 After installing, restart the agent (or run `/skills reload` in Gemini) so the new skill is picked up.
