@@ -3,8 +3,8 @@ name: ds-guard
 description: >
   Automatically run after any edit to a .css, .tsx, .ts, .jsx, or .js file that contains styling.
   Triggers on: new CSS rules, className changes, style props, token usages, or any visual/layout change.
-  Checks the diff against the project's design system token inventory and showcase (canon).
-  Flags hardcoded values, off-system tokens, Tailwind utility classes, and patterns not established in the showcase.
+  Checks the diff against the project's design system token inventory and living style guide (canon, if one exists).
+  Flags hardcoded values, off-system tokens, Tailwind utility classes, and patterns not established in the living style guide.
   Run this before every commit that touches styles or components.
 ---
 
@@ -35,13 +35,16 @@ Find the project's token source files:
 
 If no token files are found, ask the user where the design system is defined before proceeding.
 
-## Step 2 — Discover the design system showcase (canon)
+## Step 2 — Discover the living style guide (canon, if one exists)
 
-Before checking any diff, look for an existing DS showcase or component gallery:
-- Common locations: `src/app/design-system/`, `src/pages/ds/`, `src/app/ds*/`, `/design-system*`, storybook `stories/` dirs
-- The showcase is **canon** — any component pattern, spacing, color usage, or variant shown there takes precedence over what the diff introduces
-- If the diff introduces a new pattern that doesn't exist in the showcase, flag it: the pattern should be added to the showcase first (or the diff should reuse an existing pattern instead)
-- If a showcase exists but the diff contradicts it (e.g. a button style that differs from the showcase's button), that's a violation
+Look for a **living style guide** — a page that renders the real production components as the reference, so it can't drift from the app. Projects also call it a pattern library, component catalog, design-system page, showcase, or Storybook. Do NOT assume one exists. Common locations: `src/app/design-system/`, `src/pages/ds/`, `src/app/ds*/`, `/design-system*`, storybook `stories/` dirs.
+
+**If a living style guide exists**, treat it as canon:
+- Any component pattern, spacing, color usage, or variant shown there takes precedence over what the diff introduces.
+- A diff that introduces a new pattern absent from it → flag it (add it to the living style guide first, or reuse an existing pattern).
+- A diff that contradicts it (e.g. a button style differing from the canon button) → violation.
+
+**If none exists**, skip the canon-relative checks (this step and the "Living-style-guide-local component skinning" check below) — the token-hygiene checks still apply. Don't invent one or demand one; you may note its absence once if the project looks like it would benefit, but never block a diff for lacking it.
 
 ## Step 3 — Read the diff
 
@@ -68,6 +71,19 @@ Before checking any diff, look for an existing DS showcase or component gallery:
 
 ### Inline styles (flag, don't auto-fail)
 - `style={{ color: '...' }}` or `style={{ padding: '...' }}` — flag for review; inline styles bypass the token layer but are sometimes necessary
+
+### Living-style-guide-local component skinning (canon violation)
+
+(Only applies if the project has a living style guide — see Step 2. Skip otherwise.) Step 2 treats it as canon — but that only holds if it RENDERS the real production components AND their styling lives in production (so the app inherits it). The inverse failure is the living style guide re-skinning a real component with guide-local classes: the guide looks right while the app's own component ships unstyled. This is a violation even when every value is on-token (so the checks above pass it cleanly).
+
+When the diff touches the living style guide, flag:
+- A component-specific styling prop (e.g. `overlayClassName`, `contentClassName`, `panelClassName`, `footerClassName`, or other `*ClassName` props the project's primitives expose) passed to an imported production component — those props exist only on the real components, so using them here means a component is being skinned guide-locally.
+- A `className` on an imported production component pointing to a class defined only in the guide's own stylesheet.
+- A section that hand-builds a look-alike (raw elements + bespoke classes) for something that already exists as a real component.
+
+Fix: move the base styling into the PRODUCTION component (token-driven) so the app and the guide render the same thing; the guide then renders the real component unskinned. If the project has a deterministic canon check (a CI lint scanning the guide for these props), don't bypass it; if it has none, recommend adding one.
+
+The app must never be the canon source for component styling, primitives, or layout — canon lives in the component and flows downstream to both the showcase and the app.
 
 ## Step 4 — Report
 
