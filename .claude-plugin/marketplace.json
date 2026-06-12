@@ -31,6 +31,7 @@
         "./post-merge",
         "./pr-review-fix-pipeline",
         "./prioritize-issues",
+        "./project-bootstrap",
         "./skill-parity",
         "./tdd-implement",
         "./test-fix",
