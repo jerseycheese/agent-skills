@@ -16,6 +16,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[post-merge](post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
 - **[pr-review-fix-pipeline](pr-review-fix-pipeline/SKILL.md)** — Review a PR and apply fixes for the non-controversial issues in one pass.
 - **[prioritize-issues](prioritize-issues/SKILL.md)** — Rank the backlog by value, effort, age, and roadmap fit. Returns a top-5 with specs for the top 3.
+- **[ship-issue](ship-issue/SKILL.md)** — Drive one issue from cold start to merged PR: sync, analyze, minimal fix with a test, PR, CI green, post-merge cleanup, wrap-up.
 - **[skill-parity](skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Gemini CLI, and shared `.agents/skills` paths.
 - **[tdd-implement](tdd-implement/SKILL.md)** — Red-green-refactor. Tests track acceptance criteria, not implementation details.
 - **[test-fix](test-fix/SKILL.md)** — Diagnose and fix failing tests with a hard 3-attempt limit per failure to avoid debugging spirals.
