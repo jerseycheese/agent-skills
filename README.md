@@ -7,6 +7,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[analyze-issue](analyze-issue/SKILL.md)** — Read a GitHub issue and produce a technical spec with scope, patterns, and MVP tests.
 - **[browser-debugger-cli](browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
 - **[ci-fix-with-memory](ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
+- **[code-health-audit](code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
 - **[cyoa](cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
 - **[dead-code-cleanup](dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
 - **[drupal-mental-model](drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
@@ -16,6 +17,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[post-merge](post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
 - **[pr-review-fix-pipeline](pr-review-fix-pipeline/SKILL.md)** — Review a PR and apply fixes for the non-controversial issues in one pass.
 - **[prioritize-issues](prioritize-issues/SKILL.md)** — Rank the backlog by value, effort, age, and roadmap fit. Returns a top-5 with specs for the top 3.
+- **[project-bootstrap](project-bootstrap/SKILL.md)** — Stamp a new repo's agent scaffolding: a CLAUDE.md from the house template, starter settings, and a launch.json with a free port.
 - **[ship-issue](ship-issue/SKILL.md)** — Drive one issue from cold start to merged PR: sync, analyze, minimal fix with a test, PR, CI green, post-merge cleanup, wrap-up.
 - **[skill-parity](skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Gemini CLI, and shared `.agents/skills` paths.
 - **[tdd-implement](tdd-implement/SKILL.md)** — Red-green-refactor. Tests track acceptance criteria, not implementation details.
