@@ -7,7 +7,7 @@ description: Close out the current chat with a tight summary and a sweep of the 
 
 ## Purpose
 
-End-of-chat closure ritual. Two jobs: (1) produce a short closing report so the conversation has a clean outcome, and (2) sweep the current project's durable context files — memory, status docs, tasks, plans, and any project-specific reminders — so anything worth keeping makes it out of the transcript before the chat ends.
+End-of-chat closure ritual. Two jobs: (1) produce a short closing report so the conversation has a clean outcome, and (2) sweep the current project's durable context files — memory, status docs, tasks, plans, and any project-specific reminders — so anything worth keeping makes it out of the transcript, and clear the chat's runtime leftovers (stop dev servers it started, delete its finished plan files) before the chat ends.
 
 This skill is project-aware. It adapts to whatever repo you run it from: it discovers the context files the current project actually uses instead of assuming a fixed layout, and it honors any end-of-session conventions documented in that project's `CLAUDE.md` / `AGENTS.md`. Run it from a code repo and it sweeps that repo's docs and tasks; run it from a personal life-OS or notes repo and it picks up that repo's own conventions.
 
@@ -52,8 +52,13 @@ If the project uses Claude Code auto-memory (a `memory/` directory with a `MEMOR
 
 ### Plan files — `~/.claude/plans/`
 
-- If a plan file was created for this chat's work and the work is now done or abandoned, offer to delete it.
-- Leave plan files alone if they're still load-bearing for future chats.
+- Delete the plan file(s) created for this chat's work once the work is done or abandoned — automatically, no confirmation.
+- Leave a plan file alone only if it's explicitly still load-bearing for a separate, in-flight effort.
+
+### Dev servers & background processes
+
+- Stop any dev servers or other long-running background processes started during this chat — automatically, no confirmation. Stop the background tasks you launched (or the processes on their ports), then verify the ports are free.
+- Leave servers you didn't start in this chat alone (something the user already had running).
 
 ### Project-specific conventions
 
@@ -69,9 +74,9 @@ If the project uses Claude Code auto-memory (a `memory/` directory with a `MEMOR
 2. Orient to the project: find the root, read its `CLAUDE.md` / `AGENTS.md` for end-of-session conventions.
 3. Draft the closing report (summary / decisions / loose ends). Show it to the user first.
 4. Walk the housekeeping checklist. Batch every proposed file change as **file → what changes → why** before writing anything.
-5. Confirm before deletes or destructive edits. Additive edits (new memory file, new task line, log append, new reminder) can proceed without confirmation.
+5. Confirm before deletes or destructive edits — EXCEPT the two always-on cleanups, which happen automatically: stopping dev servers started this chat, and deleting this chat's plan files. Additive edits (new memory file, new task line, log append, new reminder) also proceed without confirmation.
 6. Apply the agreed changes.
-7. Print a final one-liner: `Wrapped. N memory edits, M task additions, K plan files closed.`
+7. Print a final one-liner: `Wrapped. N memory edits, M task additions, K plan files deleted, S servers stopped.`
 
 ## Rules
 
