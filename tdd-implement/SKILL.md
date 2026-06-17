@@ -32,6 +32,11 @@ Tests to avoid:
 - Prop-passing tests
 - Checking that a function was called (unless it's the actual requirement)
 - Exhaustive edge cases not in the acceptance criteria
+- Tests that just re-assert a simple layout/visual fix — a `box-sizing`, padding, or margin tweak guards a value, not behavior, and only bloats the suite
+
+### Some fixes don't warrant a test at all
+
+TDD doesn't mean every change gets a spec. When the entire fix is a one-line CSS/layout change, a config tweak, or a copy edit, a dedicated test (Playwright or unit) that pins a single property value is test bloat, not coverage — it makes the suite slower and noisier without catching a real regression class. For these, verify it live (run the app, observe the behavior) and lean on the existing visual-regression / smoke coverage instead of adding a new spec. Say so plainly ("one-line layout fix — no dedicated test") and move on rather than padding the suite to satisfy a checkbox. Reserve new tests for changes with real behavior a user could notice breaking.
 
 Show the user the test plan and confirm it looks right before writing code.
 
