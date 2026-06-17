@@ -1,6 +1,6 @@
 ---
 name: post-merge
-description: Runs the post-merge workflow after a PR is merged. Phase 0 syncs the correct base branch and deletes the merged branch and its worktree so later work never starts from stale state. Phase 1 closes the loop on linked GitHub issues (posts a completion comment, marks acceptance criteria done, closes the issue if fully addressed). Phase 2 recommends the single best next issue to work on, scoring all open issues by value, effort, and age. Invoke whenever the user says a PR was merged — "merged PR #42", "just merged the auth fix", "PR is merged", "I merged #123".
+description: Runs the post-merge workflow after a PR is merged. Phase 0 syncs the correct base branch and deletes the merged branch and its worktree so later work never starts from stale state. Phase 1 automatically closes the loop on linked GitHub issues (posts a completion comment, marks acceptance criteria done, closes the issue if fully addressed, ticks any parent epic) without asking permission — including for PRs merged into a non-default base like develop, where GitHub won't auto-close. Phase 2 recommends the single best next issue to work on, scoring all open issues by value, effort, and age. Invoke whenever the user says a PR was merged — "merged PR #42", "just merged the auth fix", "PR is merged", "I merged #123".
 ---
 
 # Post-Merge Workflow
@@ -54,25 +54,29 @@ You want to be on the synced base branch, working tree clean, with the feature b
 
 ## Phase 1: Issue Cleanup
 
+Updating and closing the linked issues is the **default, automatic outcome** of this phase — do it without pausing to ask permission. The only judgment call is whether an issue is *fully* addressed (check its boxes and close it) or only *partially* (check boxes, comment, leave open). When the user says "the PRs are merged" with no numbers, first confirm which ones actually merged — a "they're all in" claim is often only partly true — and act only on the ones that did.
+
 ### 1. Get the PR
 
-If the user gave you a PR number, use it. If they described it by name, find it:
+If the user gave you a PR number, use it. If they described it by name (or said "merged" with no number), find it:
 
 ```bash
 gh pr list --state merged --limit 10
 ```
 
-Then pull the details:
+Then pull the details and confirm it actually merged before acting:
 
 ```bash
-gh pr view [NUMBER] --json number,title,body,mergedAt,headRefName,closingIssuesReferences
+gh pr view [NUMBER] --json number,title,body,state,mergedAt,headRefName,closingIssuesReferences
 ```
+
+Only proceed for PRs where `state` is `MERGED`. If the user named several, check each — don't take "they're merged" to mean all of them are.
 
 ### 2. Find linked issues
 
 Check two places:
 
-- `closingIssuesReferences` from the JSON above (GitHub auto-detects closing keywords)
+- `closingIssuesReferences` from the JSON above (GitHub auto-detects closing keywords) — **but this is only populated when the PR targets the repo's default branch.** For a PR merged into a non-default base (e.g. `develop`), it's empty and GitHub will NOT auto-close anything, so the manual comment + checkbox + close below is mandatory, not optional.
 - Scan the PR body manually for patterns: `closes #N`, `fixes #N`, `resolves #N`, `related to #N`
 
 If the user mentioned a specific issue in their message, include that too.
@@ -93,12 +97,14 @@ Addressed in PR #[NUMBER] — merged [date].
 
 **c) Update acceptance criteria checkboxes** — if the issue body has a checklist and the PR clearly addressed specific items, edit the body to check them off. Only check what was actually delivered; leave unchecked items alone. Use `gh issue edit [NUMBER] --body "..."` with the updated text.
 
-**d) Close the issue** if it's fully addressed (all checklist items done, or no checklist and the PR directly resolves it):
+**d) Close the issue** if it's fully addressed (all checklist items done, or no checklist and the PR directly resolves it) — automatically, no confirmation:
 ```bash
 gh issue close [ISSUE_NUMBER] --comment "Closed by #[PR_NUMBER]."
 ```
 
 If the issue is only partially addressed, leave it open — just post the comment and check the relevant boxes.
+
+**e) Update any parent epic / tracking issue.** If the closed issue shows up as a checklist line in an epic or meta-issue (e.g. `- [ ] #61 ...`), tick that line too so the epic reflects reality — fetch the epic body, flip the one line, and `gh issue edit [EPIC] --body-file ...`.
 
 ### 4. Report what you did
 
