@@ -24,6 +24,7 @@
         "./code-health-audit",
         "./cyoa",
         "./dead-code-cleanup",
+        "./doc-rot",
         "./drupal-mental-model",
         "./ds-guard",
         "./github-screenshot",

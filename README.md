@@ -10,6 +10,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[code-health-audit](code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
 - **[cyoa](cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
 - **[dead-code-cleanup](dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
+- **[doc-rot](doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
 - **[drupal-mental-model](drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
 - **[ds-guard](ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
 - **[github-screenshot](github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
