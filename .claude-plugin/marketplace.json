@@ -38,6 +38,7 @@
         "./test-fix",
         "./test-workflow",
         "./visual-crawl",
+        "./visual-qa-pipeline",
         "./worktree-enhanced",
         "./wrap-it-up"
       ]
