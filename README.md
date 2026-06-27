@@ -13,6 +13,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[doc-rot](doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
 - **[drupal-mental-model](drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
 - **[ds-guard](ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
+- **[evidence-check](evidence-check/SKILL.md)** — Honesty gate for AI claims. Classifies each claim by evidence tier (verified / confirmed / inferred / unverified) and blocks guesses from being stated as fact. State claims default to unverified until a file's been read or a command run.
 - **[github-screenshot](github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
 - **[kiss](kiss/SKILL.md)** — Strip a diff down to the minimum surface needed for its goal. Drops the "while I'm here" extras.
 - **[post-merge](post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
