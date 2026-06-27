@@ -24,6 +24,7 @@
         "./code-health-audit",
         "./cyoa",
         "./dead-code-cleanup",
+        "./doc-rot",
         "./drupal-mental-model",
         "./ds-guard",
         "./github-screenshot",
@@ -38,6 +39,7 @@
         "./test-fix",
         "./test-workflow",
         "./visual-crawl",
+        "./visual-qa-pipeline",
         "./worktree-enhanced",
         "./wrap-it-up"
       ]

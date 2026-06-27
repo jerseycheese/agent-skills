@@ -44,6 +44,20 @@ mkdir -p "$OUTDIR"
 
 Store `$OUTDIR` path — all screenshots go here.
 
+**Target-identity guard.** `bdg` attaches to a Chrome instance, and its active target can silently drift to another open tab between commands — you reload and suddenly you're screenshotting a different app on a different port. A URL check isn't enough (two apps can share a path). Before the crawl and **before every screenshot**, confirm the page is the app you mean by a stable marker — `document.title`, an app-specific selector, or both — and abort on mismatch rather than capturing the wrong app:
+
+```bash
+# Set EXPECT to a substring unique to this app's title (or use an app-only selector)
+EXPECT="MyApp"
+guard() {
+  t=$(bdg dom eval "document.title" 2>&1 | tail -1)
+  echo "$t" | grep -q "$EXPECT" || { echo "WRONG TARGET ($t) — bdg drifted; stop, restart on the right URL, re-pin"; return 1; }
+}
+guard || exit 1
+```
+
+If `guard` fails: `bdg stop && bdg <correct-url>`, wait, re-pin with `bdg cdp Page.navigate`, and re-verify before continuing.
+
 ### Phase 1: Randomize the Run
 
 Each invocation MUST vary. Build the run plan by randomizing THREE axes:
@@ -116,6 +130,8 @@ sleep 1
 For each page+breakpoint combo, randomly decide the screenshot strategy (vary across the run):
 
 ```bash
+# Re-run the target-identity guard FIRST — bdg may have drifted to another tab
+guard || exit 1
 # ALWAYS take the full-page screenshot first
 bdg dom screenshot $OUTDIR/PAGE-WIDTHxHEIGHT-full.png
 ```
@@ -444,6 +460,7 @@ This ensures cumulative coverage — run it 5 times and you've thoroughly audite
 ## Gotchas Learned From Testing
 
 - **Shell quoting is the #1 friction point.** Any `bdg dom eval` with `getComputedStyle()`, `!`, or single quotes WILL break in zsh. Always use the temp file pattern (see audit checks section). Simple double-quote-only expressions work inline.
+- **`bdg` drifts to the wrong tab.** Its active target can silently switch to another open Chrome tab (e.g. a different app on a different port) between commands — especially after a `Page.reload`. Run the target-identity guard before every screenshot (see Phase 0). A wrong-app screenshot that looks plausible is worse than a crash.
 - **macOS has no `shuf`** — use `perl -MList::Util=shuffle` for randomization.
 - **`bdg dom click` syntax**: use `bdg dom click ".selector"` or `bdg dom click 5` (positional index from previous query). NOT `--index N`.
 - **Sleep after viewport resize** — `sleep 1` is needed after `setDeviceMetricsOverride` for content to reflow before screenshotting.

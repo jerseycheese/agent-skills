@@ -10,6 +10,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[code-health-audit](code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
 - **[cyoa](cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
 - **[dead-code-cleanup](dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
+- **[doc-rot](doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
 - **[drupal-mental-model](drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
 - **[ds-guard](ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
 - **[github-screenshot](github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
@@ -24,6 +25,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[test-fix](test-fix/SKILL.md)** — Diagnose and fix failing tests with a hard 3-attempt limit per failure to avoid debugging spirals.
 - **[test-workflow](test-workflow/SKILL.md)** — Pick and run the right suite (unit, E2E, visual, CSS lint) after a source edit, before commit.
 - **[visual-crawl](visual-crawl/SKILL.md)** — Crawl the running app at random breakpoints, screenshot regressions, check token consistency.
+- **[visual-qa-pipeline](visual-qa-pipeline/SKILL.md)** — Take a visual crawl all the way to shipped work: triage findings, file Major+ as GitHub issues with screenshots, batch the small stuff, and open fix PRs for mechanical token violations. Schedulable.
 - **[worktree-enhanced](worktree-enhanced/SKILL.md)** — Set up a git worktree with branch, dev-server detection, and project-specific setup.
 - **[wrap-it-up](wrap-it-up/SKILL.md)** — Close out a chat with a tight summary and a sweep of related context files (memory, plans, status, logs).
 
