@@ -4,11 +4,29 @@ labels:
   - enhancement
 body:
   - type: textarea
+    id: plain-summary
+    attributes:
+      label: Plain-language summary
+      description: One or two sentences a non-technical reader would understand. What would this let someone do?
+      placeholder: Add a way to X so that Y takes one step instead of five.
+    validations:
+      required: true
+
+  - type: textarea
     id: problem
     attributes:
       label: Problem statement
-      description: What problem are we trying to solve?
-      placeholder: The current workflow does not ...
+      description: What problem are we solving? Who hits it, and when?
+      placeholder: Today the workflow forces ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      description: Frame the value from the user's point of view.
+      placeholder: As a <type of user>, I want <goal> so that <benefit>.
     validations:
       required: true
 
@@ -16,23 +34,8 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: Describe your preferred approach.
+      description: Your preferred approach.
       placeholder: We should add ...
-    validations:
-      required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives considered
-      description: What other options did you consider?
-
-  - type: textarea
-    id: value
-    attributes:
-      label: Value and impact
-      description: Who benefits and how?
-      placeholder: This will improve ...
     validations:
       required: true
 
@@ -40,6 +43,7 @@ body:
     id: acceptance
     attributes:
       label: Acceptance criteria
+      description: The specific, checkable requirements for "done."
       placeholder: |
         - [ ] ...
         - [ ] ...
@@ -47,7 +51,13 @@ body:
       required: true
 
   - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other options you weighed, and why this one.
+
+  - type: textarea
     id: implementation
     attributes:
       label: Implementation notes (optional)
-      description: Constraints, dependencies, rollout notes, risks
+      description: Constraints, dependencies, risks, or rollout notes.
