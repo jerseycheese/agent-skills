@@ -7,16 +7,22 @@ body:
     id: objective
     attributes:
       label: Objective
-      description: One-line task objective
-      placeholder: Update skill docs for consistency
+      description: One-line statement of what this task delivers.
+      placeholder: Update the skill docs for naming consistency
     validations:
       required: true
+
+  - type: textarea
+    id: plain-summary
+    attributes:
+      label: Plain-language summary (optional)
+      description: One or two sentences a non-technical reader would understand. Skip if the objective already reads plainly.
 
   - type: textarea
     id: context
     attributes:
       label: Context
-      description: Why this task is needed
+      description: Why this is needed now, and any background.
     validations:
       required: true
 
@@ -30,17 +36,29 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated complexity
+      options:
+        - Small (1-2 days)
+        - Medium (3-5 days)
+        - Large (1+ week)
+
   - type: textarea
     id: done
     attributes:
       label: Definition of done
-      placeholder: |
-        - [ ] Code merged
-        - [ ] Tests pass
-        - [ ] Docs updated
+      description: The checks that must pass before this is closed.
+      value: |
+        - [ ] Change implemented
+        - [ ] Tests added or updated (or a note on why not)
+        - [ ] Docs updated where needed
+        - [ ] Reviewed
+        - [ ] Acceptance criteria / deliverables verified
 
   - type: textarea
     id: links
     attributes:
       label: Related links
-      description: PRs, issues, docs, or discussion links
+      description: PRs, issues, docs, or discussions.
