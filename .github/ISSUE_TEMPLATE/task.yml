@@ -1,0 +1,46 @@
+name: Task
+description: Track a scoped engineering task
+labels:
+  - task
+body:
+  - type: input
+    id: objective
+    attributes:
+      label: Objective
+      description: One-line task objective
+      placeholder: Update skill docs for consistency
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this task is needed
+    validations:
+      required: true
+
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Deliverables
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      placeholder: |
+        - [ ] Code merged
+        - [ ] Tests pass
+        - [ ] Docs updated
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Related links
+      description: PRs, issues, docs, or discussion links
