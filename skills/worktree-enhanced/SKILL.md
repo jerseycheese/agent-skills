@@ -20,6 +20,7 @@ Use this skill when:
 
 This skill handles the full worktree setup workflow with:
 - Dev server detection and coordination
+- Local env file propagation from the main checkout
 - Automatic dev server startup option
 - Project-specific worktree conventions
 
@@ -27,41 +28,70 @@ This skill handles the full worktree setup workflow with:
 
 ### 1. Dev Server Awareness
 
-Before creating worktree, check:
+Every worktree gets its own dev-server port — never assume port 3000 belongs to the worktree you're in. If the project has adopted the per-worktree port pattern (`scripts/worktree-port.cjs`, installed by `install-worktree-port.sh`), resolve the port before checking it:
+
 ```bash
-# Check if dev server is running on port 3000
-DEV_SERVER_PID=$(lsof -ti:3000)
+# Resolve this checkout's port: the per-worktree script if the project has it
+# installed, else the port recorded in .claude/launch.json, else 3000 (the
+# main-checkout default)
+if [ -f scripts/worktree-port.cjs ]; then
+  PORT="$(node scripts/worktree-port.cjs)"
+else
+  PORT="$(node -p "require('./.claude/launch.json').configurations[0].port" 2>/dev/null || echo 3000)"
+fi
+
+DEV_SERVER_PID=$(lsof -ti:"$PORT")
 
 if [ -n "$DEV_SERVER_PID" ]; then
-  echo "✅ Dev server running (PID: $DEV_SERVER_PID)"
-  echo "Worktree will share this dev server"
+  echo "Dev server already running on port $PORT (PID: $DEV_SERVER_PID)"
 else
-  echo "ℹ️  No dev server detected on port 3000"
-  echo "You'll need to start one in the worktree (or main workspace)"
+  echo "No dev server running on port $PORT yet"
 fi
 ```
+
+If the project has no per-worktree port scripts yet, run `install-worktree-port.sh <project-dir>` (in `shared/Development/tools/dev-server/`) before creating more worktrees — otherwise every worktree's `npm run dev` fights over the same port.
 
 ### 2. Worktree Creation
 ```bash
 # Standard worktree creation from base skill
 git worktree add [path] -b [branch] [base-branch]
 
+# Copy ignored local env files from the main checkout, if present. These files
+# stay untracked, but worktrees need the same server-side keys and feature flags.
+main_worktree="$(git worktree list --porcelain | awk '
+  /^worktree / { path = substr($0, 10) }
+  /^branch / && $2 !~ /worktrees/ {
+    print path
+    exit
+  }
+')"
+
+for env_file in .env.local .env.development.local .env.test.local; do
+  if [ -n "$main_worktree" ] &&
+     [ "$main_worktree" != "[worktree-path]" ] &&
+     [ -f "$main_worktree/$env_file" ] &&
+     [ ! -f "[worktree-path]/$env_file" ]; then
+    cp "$main_worktree/$env_file" "[worktree-path]/$env_file"
+    echo "Copied $env_file from main checkout"
+  fi
+done
+
 # Enhanced: Offer dev server startup
 cd [worktree-path]
 
 # Check if package.json exists
 if [ -f package.json ]; then
-  echo "📦 Found package.json"
+  echo "Found package.json"
   echo ""
   echo "Dev server options:"
-  echo "(a) Start dev server now (runs in background)"
+  echo "(a) Start dev server now (runs in background, on this worktree's own port)"
   echo "(b) Skip (I'll start it manually later)"
-  echo "(c) Use dev server from main workspace"
+  echo "(c) Just point the browser at the main workspace's already-running server"
 
   # If user chooses (a):
   echo "Starting dev server in background..."
   npm run dev > dev-server.log 2>&1 &
-  echo "✅ Dev server started (PID: $!)"
+  echo "Dev server started (PID: $!)"
   echo "Logs: tail -f dev-server.log"
 fi
 ```
@@ -72,25 +102,32 @@ After worktree created:
 ```markdown
 ## Worktree Setup Complete
 
-### ✅ Created
+### Created
 - Path: [worktree-path]
 - Branch: [branch-name]
 - Base: [base-branch]
 
-### 🚀 Next Steps
+### Next Steps
 
 #### Before Starting Work
 - [ ] Verify dev server is running
-      Check: `lsof -ti:3000` or visit http://localhost:3000
+      Resolve this worktree's own port first: `node scripts/worktree-port.cjs`
+      (if installed) or the port in `.claude/launch.json`, then `lsof -ti:$PORT`
+      or visit `http://localhost:$PORT`
 
 - [ ] Install dependencies if needed
       If package-lock.json changed: `npm install`
+
+- [ ] Confirm ignored local env files are present
+      Copy `.env.local` / `.env.*.local` from the main checkout if missing;
+      never commit them. For Narraitor, `GEMINI_API_KEY` must be available
+      server-side before testing real generation.
 
 - [ ] Run tests to establish baseline
       `npm test` to verify clean state
 
 #### During Development
-- [ ] NEVER kill or restart dev server
+- [ ] NEVER kill or restart another worktree's dev server
 - [ ] Run tests in separate terminal
 - [ ] Apply 3-attempt limit for failing tests
 
@@ -104,19 +141,19 @@ After worktree created:
 - [ ] Clean up worktree when done
       `git worktree remove [path]` (only after merged!)
 
-### 🔗 Quick Commands
+### Quick Commands
 
 ```bash
 # Navigate to worktree
 cd [worktree-path]
 
-# Check dev server
-lsof -ti:3000
+# Check this worktree's dev server (resolve $PORT first, see above)
+lsof -ti:$PORT
 
-# Start dev server (if needed)
+# Start dev server (if needed) — resolves this worktree's own port automatically
 npm run dev
 
-# Run tests (don't kill dev server!)
+# Run tests (don't kill the dev server!)
 npm test
 
 # Create PR when ready
@@ -129,15 +166,15 @@ gh pr create --fill
 Critical rules:
 
 **NEVER:**
-- Kill the dev server during test runs
-- Run commands that stop the dev server
-- Restart the dev server unnecessarily
-- Start multiple dev server instances
+- Kill another worktree's dev server during test runs
+- Run commands that stop a dev server you didn't start
+- Restart a dev server unnecessarily
+- Force multiple worktrees onto the same port
 
 **ALWAYS:**
-- Check if dev server is running before tests
-- Run tests in separate process from dev server
-- Coordinate dev server across worktrees (only one on port 3000)
+- Resolve this worktree's own port before checking or starting anything
+- Run tests in a separate process from the dev server
+- Verify changes against the server for THIS worktree, not a stale one from the main tree or another worktree
 - Ask user if unclear about dev server state
 
 ## Worktree Naming Convention
@@ -171,17 +208,18 @@ When working on multiple issues in parallel, create a worktree per issue:
 git worktree add ../[project]-issue-123 -b issue-123-develop develop
 git worktree add ../[project]-issue-145 -b issue-145-develop develop
 
-# Start dev server in one worktree — others share the same port
+# Each worktree's port is derived from its own path — start a dev server in
+# either or both, no coordination needed
 ```
 
 ### With `test-fix`
 
 In worktree context:
 ```
-1. Verify dev server running
+1. Verify dev server running (this worktree's own port)
 2. Run failing test
 3. Apply 3-attempt limit
-4. Never kill dev server during debugging
+4. Never kill the dev server during debugging
 ```
 
 ### With `pr-review-fix-pipeline`
@@ -201,7 +239,7 @@ After work complete in worktree:
 ### Starting New Issue
 
 ```
-User: /worktree-enhanced
+User: set up a worktree for issue 123
 
 Claude: Creating worktree for new work.
 
@@ -217,26 +255,26 @@ Claude: Issue number?
 
 User: 123
 
-Claude: [Checks dev server status]
+Claude: [Checks main checkout's dev server]
 
-✅ Dev server running on port 3000 (PID: 12345)
+Main checkout dev server running on port 3000 (PID: 12345)
 
 Creating worktree:
 - Path: ../[project]-issue-123
 - Branch: issue-123-develop
 - Base: develop
 
-[Creates worktree]
+[Creates worktree, copies .env.local from the main checkout]
 
-✅ Worktree created
+Worktree created. This worktree's own port: 3247 (derived from its path).
 
 Dev server options:
-(a) Use existing dev server from main workspace
-(b) Start new dev server in this worktree (will fail - port in use)
+(a) Start a dev server for this worktree on port 3247
+(b) Just use the main checkout's server on 3000 for now
 
 User: a
 
-Claude: ✅ Using existing dev server on port 3000
+Claude: Dev server started on port 3247 (PID: 12401)
 
 [Presents post-creation checklist]
 
@@ -250,17 +288,15 @@ User: Create worktrees for issues 123, 145, 167
 
 Claude: Creating 3 worktrees for parallel work...
 
-[Checks dev server]
-✅ Dev server running on port 3000
-
 Creating worktrees:
-1. ../[project]-issue-123 (issue-123-develop)
-2. ../[project]-issue-145 (issue-145-develop)
-3. ../[project]-issue-167 (issue-167-develop)
+1. ../[project]-issue-123 (issue-123-develop) -> port 3247
+2. ../[project]-issue-145 (issue-145-develop) -> port 3512
+3. ../[project]-issue-167 (issue-167-develop) -> port 3089
 
-All 3 worktrees will share the dev server on port 3000.
+Each worktree's port is derived from its own path, so there's no collision
+and no coordination needed — start a dev server in any or all of them.
 
-✅ All worktrees created
+All 3 worktrees created.
 
 You can now work on all 3 issues in parallel without conflicts.
 ```
@@ -281,7 +317,7 @@ git branch -d issue-123-develop
 
 **Safety check before removal:**
 ```
-⚠️ Before removing worktree:
+Before removing worktree:
 - [ ] Verify PR is merged or changes are committed
 - [ ] Check for uncommitted changes: `git status`
 - [ ] Confirm no valuable work will be lost
@@ -291,5 +327,5 @@ Proceed with removal? (y/n)
 
 ## Notes
 
-- Dev server protection is intentional — running tests while a server is active on the same port risks killing it
+- Dev server protection is intentional — killing another worktree's server mid-test throws away its state and can mask real failures. Always verify against the port for the worktree you're actually in, not whatever happens to be running on 3000.
 - TodoWrite checklist keeps track of worktree state across a session
