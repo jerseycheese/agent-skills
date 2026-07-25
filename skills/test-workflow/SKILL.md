@@ -5,6 +5,7 @@ description: >
   Triggers on: any src/ file edit before a commit, or when the user says "run tests", "check tests", or "make sure tests pass".
   Selects unit, E2E, visual regression, or CSS lint based on what changed. Protects running dev servers.
   Do NOT wait for user to ask after a code change — run proactively before committing.
+  Not for documentation-only or config-only edits, or when the user says to skip tests.
 ---
 
 ## When to invoke (auto-trigger)
@@ -239,7 +240,7 @@ npm run test:e2e:critical
 E2E_STATUS=$?
 ```
 
-**If E2E test fails:** Apply `/test-fix` skill (3-attempt limit)
+**If E2E test fails:** Apply the `test-fix` skill (3-attempt limit)
 
 Report:
 ```markdown
@@ -315,7 +316,7 @@ Time: 4m 12s
 
 All tests passing! Ready to:
 - Commit changes: `git add . && git commit`
-- Create PR: `/pr-review-fix-pipeline`
+- Create PR: `pr-review-fix-pipeline`
 - Push: `git push`
 
 ### 💡 Insights
@@ -388,7 +389,7 @@ npm run type-check                 # TypeScript
 
 ## Integration with Other Skills
 
-### With `/test-fix`
+### With `test-fix`
 When test fails:
 ```
 1. Apply test-fix skill (3-attempt limit)
@@ -397,7 +398,7 @@ When test fails:
 4. Report flagged tests in final summary
 ```
 
-### With `/pr-review-fix-pipeline`
+### With `pr-review-fix-pipeline`
 After tests pass:
 ```
 1. Tests validated ✅
@@ -406,7 +407,7 @@ After tests pass:
 4. Merge when approved
 ```
 
-### With `/worktree-enhanced`
+### With `worktree-enhanced`
 In worktree context:
 ```
 1. Verify dev server running

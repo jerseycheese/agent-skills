@@ -14,7 +14,7 @@ Keep skills aligned across Claude Code, Codex, Gemini CLI, and the shared Agent 
 
 ## Canonical source: the agent-skills repo (push-based)
 
-The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`), which is also a Claude Code plugin marketplace (`jack-skills` -> plugin `workflow-skills`). The intended flow is:
+The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`), which is also a Claude Code plugin marketplace (`jerseycheese-skills` -> plugin `workflow-skills`). The intended flow is:
 
 1. Edit a skill once in the repo.
 2. `git push`.

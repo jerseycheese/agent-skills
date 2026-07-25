@@ -6,6 +6,7 @@ description: >
   code before acting: auto-fixes the high-confidence rot, surfaces judgment calls for review.
   Trigger on: "find stale docs", "outdated documentation", "doc rot", "doc sniffer", "clean up docs",
   "are the docs current", "deprecated docs", "fix the README", "stale comments", "remove commented-out code".
+  For a broader sweep of dead variables, functions, files, or tests (not just docs/comments), use dead-code-cleanup instead.
 ---
 
 # Doc Rot

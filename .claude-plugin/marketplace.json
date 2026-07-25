@@ -7,14 +7,16 @@
     {
       "name": "workflow-skills",
       "source": "./",
-      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code cleanup, code-health audits, worktree setup, and session wrap-up skills.",
+      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code and doc-rot cleanup, code-health and visual-QA audits, evidence-checked claims, worktree setup, project bootstrap, cross-provider skill parity, and session wrap-up skills.",
       "strict": false,
       "keywords": [
         "workflow",
         "skills",
         "testing",
         "code-review",
-        "issue-triage"
+        "issue-triage",
+        "documentation",
+        "visual-qa"
       ],
       "license": "MIT",
       "skills": [
