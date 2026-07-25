@@ -5,6 +5,7 @@ description: >
   Triggers on: any mention of CI failure, red checks, failed GitHub Actions, or "CI is broken/failing".
   Reads session handoffs and a known-issues log to avoid repeating failed fix attempts.
   Do NOT wait for user to ask — invoke as soon as a CI failure is confirmed.
+  Not for local-only test failures (use test-fix instead) or lint-only failures with an obvious single-line fix.
 ---
 
 ## When to invoke (auto-trigger)

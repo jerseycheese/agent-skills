@@ -99,7 +99,7 @@ After worktree created:
       `npm run lint && npm run type-check && npm test`
 
 - [ ] Create PR or merge
-      Use `/pr-review-fix-pipeline` or manual merge
+      Use `pr-review-fix-pipeline` or manual merge
 
 - [ ] Clean up worktree when done
       `git worktree remove [path]` (only after merged!)
@@ -174,7 +174,7 @@ git worktree add ../[project]-issue-145 -b issue-145-develop develop
 # Start dev server in one worktree — others share the same port
 ```
 
-### With `/test-fix`
+### With `test-fix`
 
 In worktree context:
 ```
@@ -184,13 +184,13 @@ In worktree context:
 4. Never kill dev server during debugging
 ```
 
-### With `/pr-review-fix-pipeline`
+### With `pr-review-fix-pipeline`
 
 After work complete in worktree:
 ```
 1. Push worktree branch
 2. Create PR
-3. Run `/pr-review-fix-pipeline` on the PR
+3. Run `pr-review-fix-pipeline` on the PR
 4. Auto-fixes applied
 5. Merge when ready
 6. Clean up worktree

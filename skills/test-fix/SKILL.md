@@ -5,6 +5,7 @@ description: >
   Triggers on: test output showing FAIL, test errors, or assertion failures in unit or E2E suites.
   Applies a strict 3-attempt limit per failure to avoid debugging spirals — stops and escalates if not resolved.
   Do NOT wait for user to ask; invoke immediately when tests fail.
+  Not for build errors, type errors, or lint failures — those aren't test failures.
 ---
 
 ## When to invoke (auto-trigger)
