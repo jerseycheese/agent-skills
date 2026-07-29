@@ -21,7 +21,7 @@ gh issue list --search "[keywords]" --json number,title | head -5
 
 3. **Implement.** Apply the smallest fix that resolves the root cause. Reuse existing patterns before introducing new ones. Add or update one MVP-level test that actually covers the change — use `tdd-implement` for the test-first loop. Run the test suite and linter locally; never rig a test to pass.
 
-4. **Open the PR.** Push the branch and open a PR that links the issue (`Closes #N`). Keep the title and description tight: lead with context, say what changed and why, skip the fluff.
+4. **Open the PR.** Push the branch and open a PR that links the issue (`Closes #N`). Keep the title and description tight: lead with context, say what changed and why, skip the fluff. If the fix has a visible before/after (a UI or visual bug), embed it per the `github-screenshot` skill's convention rather than describing it in prose alone.
 
 5. **Drive CI to green.** Watch the checks. When something fails, use `ci-fix-with-memory` so you don't repeat a fix that already failed. Re-push until green. If the same failure resists three or more different fixes, stop and summarize — ask whether to skip, defer, or rethink the approach.
 
