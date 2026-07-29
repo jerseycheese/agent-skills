@@ -43,6 +43,8 @@ If a run turns up zero Major+ findings, skip Phases 3-4 and just post the roll-u
 
 For each Major+ finding, create an issue. Reuse the `gh issue create` pattern and pick from **existing** labels (`gh label list`) — never invent new ones.
 
+Commit the evidence screenshot to `github-screenshots/<topic>/` before generating its URL (see the `github-screenshot` skill's directory convention) — a `raw.githubusercontent.com` link only resolves once the file exists on a pushed branch. If the finding isn't tied to a fix branch (e.g. it's going straight into a roll-up issue with no PR), push it on its own small branch rather than reusing an unrelated one.
+
 ```bash
 # Get a renderable screenshot URL (see the github-screenshot skill)
 # generate-github-image-markdown.sh writes markdown pointing at raw.githubusercontent.com

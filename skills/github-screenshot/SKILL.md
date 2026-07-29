@@ -22,6 +22,12 @@ Use this skill when:
 
 This skill wraps a local `generate-github-image-markdown.sh` script. Update the path below to match your own installation before using.
 
+## Directory convention
+
+When the image is being committed purely so it can render in an issue/PR body (not an existing app asset the user is pointing you at), commit it under a top-level `github-screenshots/<topic-or-issue>/` directory — e.g. `github-screenshots/hover-text-invisible/before-hover.png`. The name says what these files are for: throwaway evidence for a GitHub body, not app screenshots or fixtures, so they're easy to find and prune later without touching anything else in the repo. Don't reuse a generic `screenshots/` dir for this — that name doesn't self-document, and it collides with whatever ad-hoc convention a given repo might already have for actual app screenshots.
+
+If the target repo already has an established convention for this (check with the user or look for precedent — e.g. `git log --diff-filter=A --name-only --all | grep -iE 'screenshot'`), follow that instead of introducing a second one.
+
 ## What This Skill Does
 
 Runs your `generate-github-image-markdown.sh` script to:
@@ -67,7 +73,7 @@ Show the generated markdown to the user:
 *Caption text*
 
 <!-- GitHub URL: https://raw.githubusercontent.com/... -->
-<!-- Local path: ./screenshots/image.png -->
+<!-- Local path: ./github-screenshots/image.png -->
 ```
 ```
 
@@ -91,7 +97,7 @@ I'll help you generate GitHub screenshot markdown.
 What's the image path?
 ```
 
-**User:** `./screenshots/dashboard-before.png`
+**User:** `./github-screenshots/dashboard-before.png`
 
 **Claude:**
 ```
@@ -111,12 +117,12 @@ Optional caption? (press enter to skip)
 ```markdown
 ## Generated Screenshot Markdown
 
-![Dashboard before refactor](https://raw.githubusercontent.com/user/repo/main/screenshots/dashboard-before.png)
+![Dashboard before refactor](https://raw.githubusercontent.com/user/repo/main/github-screenshots/dashboard-before.png)
 
 *Shows the original dashboard layout*
 
-<!-- GitHub URL: https://raw.githubusercontent.com/user/repo/main/screenshots/dashboard-before.png -->
-<!-- Local path: ./screenshots/dashboard-before.png -->
+<!-- GitHub URL: https://raw.githubusercontent.com/user/repo/main/github-screenshots/dashboard-before.png -->
+<!-- Local path: ./github-screenshots/dashboard-before.png -->
 
 Would you like me to insert this somewhere?
 ```
@@ -126,7 +132,7 @@ Would you like me to insert this somewhere?
 ### File Not Found
 If image doesn't exist:
 ```
-❌ Error: Image file not found at ./screenshots/missing.png
+❌ Error: Image file not found at ./github-screenshots/missing.png
 
 Please check the path and try again.
 ```
@@ -137,7 +143,7 @@ If script can't detect git repo:
 ⚠️ Warning: Couldn't generate GitHub URL (not in a git repository)
 
 Generated markdown with relative path instead:
-![Alt Text](./screenshots/image.png)
+![Alt Text](./github-screenshots/image.png)
 
 Note: This may not display correctly in GitHub
 ```
