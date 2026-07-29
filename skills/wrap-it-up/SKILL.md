@@ -21,6 +21,10 @@ A short closing report with three parts. Keep it tight — colleague-over-coffee
 
 If the chat was mostly exploration with no concrete output, say that. Don't fabricate accomplishments.
 
+## Merged PRs — run post-merge first
+
+Before the housekeeping sweep, check whether any PR opened or referenced in this chat merged during the session (ask if genuinely unclear, but take the user's own "merged"/"PR is merged" statement as ground truth per their global `CLAUDE.md` — don't re-verify it). If one did, run the `post-merge` skill for it FIRST, automatically, no confirmation — it syncs the base branch, deletes the merged branch + worktree, closes the linked issue, and scores the next issue. Fold its outcome into this closure's summary rather than leaving it as a loose end for a future chat to remember to run. Only skip it if post-merge already ran earlier in this same chat for that PR.
+
 ## Context-file housekeeping
 
 First, orient to the current project so the rest of the sweep targets the right files:
@@ -70,6 +74,7 @@ If the project uses Claude Code auto-memory (a `memory/` directory with a `MEMOR
 
 ## Process
 
+0. If a PR from this chat merged, run `post-merge` for it first (see above) — before anything else.
 1. Skim the chat. Identify outcomes, decisions, loose ends.
 2. Orient to the project: find the root, read its `CLAUDE.md` / `AGENTS.md` for end-of-session conventions.
 3. Draft the closing report (summary / decisions / loose ends). Show it to the user first.
