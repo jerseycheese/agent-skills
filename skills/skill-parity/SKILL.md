@@ -12,16 +12,16 @@ description: >
 
 Keep skills aligned across Claude Code, Codex, Gemini CLI, and the shared Agent Skills layout. Treat Claude as canon only when the user has made that explicit or recent audit context shows Claude is the cleaned source of truth.
 
-## Canonical source: the agent-skills repo (push-based)
+## Canonical source: the agent-skills repo (symlink-based, Claude side)
 
-The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`), which is also a Claude Code plugin marketplace (`jerseycheese-skills` -> plugin `workflow-skills`). The intended flow is:
+The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`). It's also registered as a Claude Code plugin marketplace (`jerseycheese-skills` -> plugin `workflow-skills`), but that plugin is deliberately **disabled** on this machine — plugin skills always need a `/plugin-name:skill-name` prefix to invoke (no bare-name resolution, even when unambiguous), and that prefix drifted unpredictably (a shifting git-SHA namespace, since the plugin has no pinned `version`). Bare `/skill-name` invocation only works for standalone skills, so:
 
 1. Edit a skill once in the repo.
-2. `git push`.
-3. Claude Code picks it up via `claude plugin marketplace update` (or restart) — no manual copy into `~/.claude/skills/`.
+2. `git push` (keeps the public marketplace listing current for other users/machines).
+3. On this machine, Claude Code loads it via a real symlink at `~/.claude/skills/<name>` -> `~/Projects/shared/agent-skills/skills/<name>` — edits are live immediately, no copy or plugin-update step needed. This is canon now, not a fallback; do not remove these symlinks or re-enable the `workflow-skills` plugin (it would double-register the same skill names).
 4. Codex and Gemini hydrate `~/.agents/skills/` from the same repo via the copy/symlink paths below (or the `find-skills` installer).
 
-So prefer editing in the repo and pushing over hand-copying between provider dirs. The legacy `~/.claude/skills/` copies remain only as a fallback until the marketplace plugin is confirmed loading; once verified, they can be removed to avoid duplicate definitions. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
+New skills added to the repo need a matching symlink created in `~/.claude/skills/` (`ln -s ../../Projects/shared/agent-skills/skills/<name> ~/.claude/skills/<name>`) — this doesn't happen automatically. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
 
 ## Research-first rule
 

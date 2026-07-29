@@ -91,7 +91,8 @@ Always include at least one mobile, one tablet, and one desktop. Always include 
 - **Typography** — font-family matches tokens, sizes consistent, no orphan lines
 - **Color tokens** — hardcoded colors vs CSS variables, contrast issues
 - **Empty states** — what happens with no data / null values
-- **Interactive elements** — buttons clickable, hover states, form inputs work
+- **Interactive elements** — buttons clickable, form inputs work
+- **Interactive states** — hover/focus/active legibility, not just clickability (see the dedicated check below — this is easy to skip and catches real bugs)
 - **Spacing consistency** — padding/margin matches design token scale
 - **Responsive behavior** — does layout actually adapt or just shrink
 - **Accessibility** — a11y tree makes sense, roles correct, labels present
@@ -264,6 +265,45 @@ bdg dom click 5
 
 # Screenshot after interaction
 bdg dom screenshot $OUTDIR/PAGE-interaction-WIDTHxHEIGHT.png
+```
+
+##### Interactive states (hover/focus/active)
+
+Every check above only looks at the resting state. Contrast and legibility bugs on `:hover`/`:focus`/`:active` are invisible to a resting-state screenshot and to every DOM check above — you have to actually trigger the state. This catches real bugs: a button whose hover `color` collides with its own hover `background` (text goes invisible), or a focus outline that matches the surface it sits on.
+
+**Fast path — force the pseudo-class via CDP and diff computed style.** This is cheap, doesn't need real mouse coordinates, and is what actually reflects in `getComputedStyle()` (see gotcha below for why this is NOT what a screenshot will show):
+
+```bash
+bdg cdp DOM.enable >/dev/null 2>&1
+bdg cdp CSS.enable >/dev/null 2>&1
+ROOT=$(bdg cdp DOM.getDocument --params '{"depth":0}' | grep -o '"nodeId":[0-9]*' | head -1 | grep -o '[0-9]*')
+NODE=$(bdg cdp DOM.querySelector --params "{\"nodeId\":$ROOT,\"selector\":\".your-button-class\"}" | grep -o '"nodeId":[0-9]*' | tail -1 | grep -o '[0-9]*')
+
+cat > /tmp/style-check.js << 'JSEOF'
+var el = document.querySelector(".your-button-class");
+var s = getComputedStyle(el);
+JSON.stringify({color: s.color, bg: s.backgroundColor, borderColor: s.borderColor, outlineColor: s.outlineColor});
+JSEOF
+bdg dom eval "$(cat /tmp/style-check.js)"   # resting state
+
+bdg cdp CSS.forcePseudoState --params "{\"nodeId\":$NODE,\"forcedPseudoClasses\":[\"hover\"]}"
+bdg dom eval "$(cat /tmp/style-check.js)"   # forced :hover — compare
+# Repeat with ["focus-visible"] and ["active"]
+```
+
+Flag it whenever a hovered/focused/active value collides with an adjacent property in a way that erases contrast — most commonly `color` resolving to the same value already used for `background` on the same state.
+
+**If you need an actual screenshot for a finding**, `forcePseudoState` won't show up in one (see gotcha) — trigger a REAL hover instead. A single `mouseMoved` dispatch at the target coordinates is not reliably enough; move through 2-3 intermediate points first, then confirm the state actually landed before shooting:
+
+```bash
+bdg cdp Input.dispatchMouseEvent --params '{"type":"mouseMoved","x":50,"y":50}'
+sleep 0.3
+bdg cdp Input.dispatchMouseEvent --params '{"type":"mouseMoved","x":<mid-x>,"y":<mid-y>}'
+sleep 0.3
+bdg cdp Input.dispatchMouseEvent --params '{"type":"mouseMoved","x":<target-x>,"y":<target-y>}'
+sleep 1
+bdg dom eval "document.querySelector('.your-button-class').matches(':hover')"   # must be true
+bdg dom screenshot --selector ".your-button-class" $OUTDIR/PAGE-hover-WIDTHxHEIGHT.png
 ```
 
 ##### Accessibility
@@ -442,7 +482,7 @@ Component: [list with component name + context]
 
 **Severity guide:**
 - **Critical**: Functionality broken, data errors (NaN/undefined displayed), interactive elements non-functional
-- **Major**: Layout breaks at specific breakpoints, design token violations (hardcoded colors/fonts), empty containers where content expected, accessibility failures
+- **Major**: Layout breaks at specific breakpoints, design token violations (hardcoded colors/fonts), empty containers where content expected, accessibility failures, interactive-state contrast failures (e.g. hover/focus text becoming unreadable against its own background)
 - **Minor**: Spacing inconsistencies, minor alignment issues, cosmetic polish items
 - **Observation**: Not a bug — patterns worth noting, areas that could use attention
 
@@ -468,6 +508,9 @@ This ensures cumulative coverage — run it 5 times and you've thoroughly audite
 - **Component screenshots via `--selector`** — `bdg dom screenshot --selector ".card"` captures just that element's bounding box. If the selector matches multiple elements, it captures the first. Use `--index N` after a `bdg dom query` to target a specific match.
 - **Check if dark mode applies before testing it** — compare `document.body` background color before and after toggling `prefers-color-scheme`. Skip if identical.
 - **`title` vs `aria-label` on icon buttons** — both technically provide accessible names, but `aria-label` is reliably read by all screen readers while `title` is not. Flag `title`-only buttons as a finding.
+- **`CSS.forcePseudoState` doesn't affect `bdg dom screenshot`.** It changes what `getComputedStyle()` reports (reliable for diffing resting vs. forced state) but the screenshot pipeline renders the actual resting state regardless — a screenshot taken right after forcing `:hover` will look identical to the unforced one even when the computed style genuinely changed. Use the computed-style diff to detect the bug, and a REAL mouse hover (multi-step `mouseMoved`, not a single dispatch) if you need a screenshot as evidence.
+- **`bdg dom screenshot --selector` can use a stale bounding box after a scroll.** If you `scrollIntoView()` or the page auto-scrolls (e.g. a tour) and then screenshot by selector without re-measuring, you can get a crop of the wrong region entirely — not a rendering bug, a tooling artifact. Re-query `getBoundingClientRect()` immediately before shooting, or fall back to a full-page screenshot to sanity-check the region.
+- **A single `mouseMoved` dispatch usually doesn't trigger `:hover`.** Move through 2-3 intermediate points before the target coordinates, then confirm with `el.matches(':hover')` before trusting the result.
 
 ## Tips
 

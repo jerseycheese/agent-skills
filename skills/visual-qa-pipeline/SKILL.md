@@ -71,6 +71,8 @@ EOF
 )"
 ```
 
+For an interactive-state finding (hover/focus/active contrast failure, e.g. text vanishing on hover), the proof is the `getComputedStyle()` diff from `visual-crawl`'s "Interactive states" check (before/after values for the colliding property), not a `forcePseudoState` screenshot — that pseudo-state doesn't render in `bdg dom screenshot`. If you want a visual alongside it, capture a REAL hover per that same section and confirm `el.matches(':hover')` before shooting.
+
 Roll-up issue for the small stuff: one issue titled `Visual polish backlog — <date>`, body is a checklist (`- [ ] <page> @ <bp>: <nit>`), each line linking its screenshot.
 
 Capture every issue number — the handoff lists them.
