@@ -20,9 +20,11 @@ This is the prose counterpart to `doc-rot` (which fixes docs that are *wrong*) a
 
 **User-facing UI copy** (button labels, error messages, empty states, in-app strings) gets plain language, AI-tell removal, and tightening only — never the developer-voice rewrite. It's a different audience with its own conventions (see the `design:ux-copy` skill if one's installed); don't impose "sounds like Jack" on a "Forgot password?" link. UI copy findings always go in the judgment-call bucket below, never auto-fixed.
 
+**This skill is for auditing text that already lives in a repo.** If the actual ask is "make this pasted paragraph more concise" or "tighten my last reply" with no file/repo target, that's a direct edit to the text in front of you — just do it. Don't run git pre-flight, don't create or touch an audit-memory file, don't treat a standalone rewrite request as a repo sweep.
+
 ## Pre-flight
 
-Per the user's git workflow: `git fetch && git status`, confirm the right base branch and that it's synced. Then scope it — don't boil the ocean. State what's in range (a directory, a domain, recently-touched files) and confirm before sweeping a whole repo.
+Per the user's git workflow: `git fetch && git status`, confirm the right base branch and that it's synced. Then scope it — don't boil the ocean. State what's in range (a directory, a domain, recently-touched files) and confirm before sweeping a whole repo. Keep that confirmed scope as a variable through the rest of the run — every search below runs against it, not the whole tree.
 
 Check for an existing audit-memory file (`docs/audit-memory.md` or `.audit-memory.md` — the same file `code-health-audit` uses, just a different section). It records what was already flagged and declined; don't re-surface rejected findings. Create the file at the end if it doesn't exist.
 
@@ -36,17 +38,21 @@ Either way, follow with a read: unexplained internal jargon (acronyms, domain te
 
 ### 2. AI tells / tropes
 
-Cheap grep-first pass, then verify each hit in context (a real technical term isn't a tell just because it's on a list):
+Cheap grep-first pass, then verify each hit in context (a real technical term isn't a tell just because it's on a list). Run every pass against the confirmed scope from Pre-flight, never a bare `.` — an unscoped recursive grep walks `.git`, `node_modules`, `dist`, vendored code, and the installed skill's own pattern list, none of which should get "fixed":
 
 ```bash
+# Set once from the confirmed Pre-flight scope, e.g. SCOPE=docs or SCOPE="README.md CLAUDE.md"
+SCOPE="${SCOPE:?set to the confirmed scope, not the whole repo}"
+EXCLUDES=(--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build --exclude-dir=vendor -I)  # -I skips binary files
+
 # Overused AI vocabulary (source: "Why does ChatGPT delve so much?" + 2026 AI-tell trackers)
-grep -rniE '\b(delve|intricate|meticulous|elevate|foster|tapestry|realm|navigate[sd]?|landscape|pivotal|resonate[sd]?|testament|underscore[sd]?|showcas(e|ing)|paramount|unwavering|commendable|compelling)\b' .
+grep -rniE "${EXCLUDES[@]}" '\b(delve|intricate|meticulous|elevate|foster|tapestry|realm|navigate[sd]?|landscape|pivotal|resonate[sd]?|testament|underscore[sd]?|showcas(e|ing)|paramount|unwavering|commendable|compelling)\b' "$SCOPE"
 
 # Metaphor-noun pileups
-grep -rniE '\b(tapestry|mosaic|ecosystem|symphony|labyrinth|beacon|cornerstone|kaleidoscope|odyssey|cacophony)\b' .
+grep -rniE "${EXCLUDES[@]}" '\b(tapestry|mosaic|ecosystem|symphony|labyrinth|beacon|cornerstone|kaleidoscope|odyssey|cacophony)\b' "$SCOPE"
 
 # Hedge-phrase templates
-grep -rniE "(it is important to note that|in today's fast-paced|navigating the complexities of|plays a crucial role in|a wide range of)" .
+grep -rniE "${EXCLUDES[@]}" "(it is important to note that|in today's fast-paced|navigating the complexities of|plays a crucial role in|a wide range of)" "$SCOPE"
 
 # Em-dash overuse (a handful in a whole file is normal prose; a cluster per paragraph is a tell)
 ```
