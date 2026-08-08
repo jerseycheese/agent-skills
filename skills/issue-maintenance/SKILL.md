@@ -119,8 +119,18 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 "post-MVP"/"v2"/"later", or its milestone targets a future phase).
 
 - No existing `priority:*` label → apply the computed tier directly (high confidence).
-- Existing label's tier ≠ computed tier → **flag** in §7, don't overwrite — someone may have set
-  it for a reason not visible in the score. Matching tiers need no action.
+- Existing label is `priority:high`/`medium`/`low` and its tier ≠ computed tier → **flag** in §7,
+  don't overwrite — someone may have set it for a reason not visible in the score. Matching tiers
+  need no action.
+- Existing label is `priority:post-mvp` → **don't compare it against the computed tier at all.**
+  Post-mvp is an intentional roadmap-sequencing override, not a score bucket — flagging every
+  post-mvp issue whose formula score happens to land in a higher tercile is noise, not signal (a
+  first live run on Narraitor's 93-issue backlog flagged 51 mismatches this way, only ~4 of which
+  were real). Instead, flag a post-mvp issue only when its own title or body text directly
+  contradicts the deferral — an explicit severity/priority claim ("High priority", "critical") or
+  MVP-scope language ("MVP approach", "(MVP)") sitting on an issue labeled post-mvp. That's a
+  narrower, higher-signal check: the issue is telling on itself, not just scoring differently than
+  expected.
 
 ## 7. Confidence policy — what auto-applies vs what's flagged
 
