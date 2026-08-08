@@ -32,6 +32,7 @@
         "./skills/evidence-check",
         "./skills/github-screenshot",
         "./skills/kiss",
+        "./skills/plain-language-audit",
         "./skills/post-merge",
         "./skills/pr-review-fix-pipeline",
         "./skills/prioritize-issues",

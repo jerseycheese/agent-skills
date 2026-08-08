@@ -16,6 +16,7 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 - **[evidence-check](skills/evidence-check/SKILL.md)** — Honesty gate for AI claims. Classifies each claim by evidence tier (verified / confirmed / inferred / unverified) and blocks guesses from being stated as fact. State claims default to unverified until a file's been read or a command run.
 - **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
 - **[kiss](skills/kiss/SKILL.md)** — Strip a diff down to the minimum surface needed for its goal. Drops the "while I'm here" extras.
+- **[plain-language-audit](skills/plain-language-audit/SKILL.md)** — Sweep comments, docs, and UI copy for jargon, AI writing tells, and verbosity. Auto-fixes the unambiguous stuff, surfaces judgment calls.
 - **[post-merge](skills/post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
 - **[pr-review-fix-pipeline](skills/pr-review-fix-pipeline/SKILL.md)** — Review a PR and apply fixes for the non-controversial issues in one pass.
 - **[prioritize-issues](skills/prioritize-issues/SKILL.md)** — Rank the backlog by value, effort, age, and roadmap fit. Returns a top-5 with specs for the top 3.
