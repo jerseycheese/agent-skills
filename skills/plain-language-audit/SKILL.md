@@ -91,7 +91,14 @@ Update the audit-memory file with what shipped and what was declined, so the nex
 
 ## Periodic / scheduled runs
 
-The behavior above is for interactive, on-demand runs — auto-fix is fine because someone's watching. A scheduled/cron run is different: no one's watching, so it should be **report-only**, no auto-fix at all, even for the "unambiguous" bucket. Follow the `weekly-narraitor-code-health` scheduled-task pattern: work from a throwaway clone, rank findings, file one GitHub issue, supersede the prior run's issue. Set this up per project via the `schedule` skill once the on-demand skill's been proven on a manual run against that project — don't stamp out a cron task blind.
+The behavior above is for interactive, on-demand runs — auto-fix is fine because someone's watching. A scheduled/cron run has no one watching, but that no longer means *no* auto-fix — it means no auto-fix on anything that requires judgment. The bucket split from "Categorize and act" already draws that line:
+
+- **Auto-fix bucket** (mechanical AI-tell swaps, redundant filler removal): apply on every run, scheduled or not. Nothing in this bucket involves picking among options — it's a deletion or a fixed phrase swap, the same edit a human reviewer would make without discussion. Withholding it just because no one's watching adds a review step with nothing to review.
+- **Judgment-call bucket** (jargon rewrites, verbosity trims, tone rewrites, all UI copy): stays report-only on scheduled runs — file for review, never guess, exactly as before.
+
+Where the fix lands depends on the target. Against a real filesystem checkout (the `weekly-narraitor-code-health`-style throwaway clone of source), route mechanical fixes through a small dedicated branch and PR rather than pushing straight to the base branch unattended, then report the PR link alongside the judgment-call findings issue. Against an API-only target with no filesystem checkout (e.g. editing GitHub issue text via `gh issue edit`), apply the mechanical fix directly — there's no branch/PR step to route it through, and issue text isn't code review's job.
+
+Either way, follow the `weekly-narraitor-code-health` scheduled-task pattern for the reporting half: rank the judgment-call findings, file one GitHub issue, supersede the prior run's issue — and now also list what was auto-fixed this run (file:line or issue link, old → new) in that same issue, so it shows the complete picture, not just what's left to review. Set this up per project via the `schedule` skill once the on-demand skill's been proven on a manual run against that project — don't stamp out a cron task blind.
 
 ## Don't
 
