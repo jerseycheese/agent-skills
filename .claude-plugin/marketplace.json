@@ -7,7 +7,7 @@
     {
       "name": "workflow-skills",
       "source": "./",
-      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code and doc-rot cleanup, code-health and visual-QA audits, evidence-checked claims, worktree setup, project bootstrap, cross-provider skill parity, and session wrap-up skills.",
+      "description": "Issue triage, TDD, CI fix-with-memory, design-system guard, PR review, dead-code and doc-rot cleanup, comment and test reaping, code-health and visual-QA audits, evidence-checked claims, worktree setup, project bootstrap, cross-provider skill parity, and session wrap-up skills.",
       "strict": false,
       "keywords": [
         "workflow",
@@ -24,6 +24,7 @@
         "./skills/browser-debugger-cli",
         "./skills/ci-fix-with-memory",
         "./skills/code-health-audit",
+        "./skills/comment-reaper",
         "./skills/cyoa",
         "./skills/dead-code-cleanup",
         "./skills/doc-rot",
@@ -31,6 +32,7 @@
         "./skills/ds-guard",
         "./skills/evidence-check",
         "./skills/github-screenshot",
+        "./skills/issue-maintenance",
         "./skills/kiss",
         "./skills/plain-language-audit",
         "./skills/post-merge",
@@ -41,6 +43,7 @@
         "./skills/skill-parity",
         "./skills/tdd-implement",
         "./skills/test-fix",
+        "./skills/test-reaper",
         "./skills/test-workflow",
         "./skills/visual-crawl",
         "./skills/visual-qa-pipeline",
