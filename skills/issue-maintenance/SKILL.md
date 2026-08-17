@@ -51,6 +51,29 @@ Never invent a label. If a label this workflow wants (`needs-repro`, `needs-info
 any `priority:*`) doesn't exist in this repo, skip that operation for the whole run and say so
 once in the report ("not configured in this repo") — don't repeat the note per issue.
 
+### 2b. Establish how this repo types its issues
+
+Pass 2 groups label coverage **by issue type**, so the run needs to know what a "type" is here
+before it can group anything. Two mechanisms exist and repos use one or the other:
+
+- **GitHub native issue types** (Bug / Feature / Task and custom ones). Check with
+  `gh issue type list` or `mcp__github__list_issue_types`. If the repo has them configured, that
+  is the typing mechanism — fetch the type per issue in the §2 bulk call.
+- **A type label convention** — `epic`, `bug`, `enhancement`, `user-story`, `documentation`, and
+  so on. The convention doc from §4b usually names these outright (Narraitor's `.github/labels.md`
+  has a `## Type Labels` section listing exactly six). Use that list as the type mapping rather
+  than inventing one from whatever labels happen to look type-ish.
+
+Don't guess the field name for native types — it has moved between `gh` versions. Run
+`gh issue list --json` with no value and `gh` prints the valid field names for the installed
+version; pick the type field from that list. Via MCP, check what `list_issues` exposes and fall
+back to per-issue reads if the bulk call doesn't carry it.
+
+**State the mechanism in the report**, once: "types read from native issue types" or "types read
+from the label convention: `epic`, `bug`, …". A run that can't determine either **skips Pass 2's
+coverage grouping entirely** and says so — it can still fill in labels that are missing from an
+individual issue, but it must not claim a whole type is exempt, because it can't identify types.
+
 ## 3. Issue selection — who gets the deep-dive
 
 Pass 4 (priority) always scores the *entire* open backlog every run — tiers are relative
@@ -67,11 +90,20 @@ or text doesn't depend on the rest of the backlog, and re-fetching comments plus
 on an issue nobody touched since last week is pure waste. Build the deep-dive set as:
 
 - Every issue whose `updatedAt` (or newest comment) is after the `Last run:` timestamp recorded in
-  the prior tracking issue (see §6) — these are the issues that plausibly changed.
+  the prior tracking issue (see §8) — these are the issues that plausibly changed.
+- **Minus the issues the previous run wrote to itself.** `updatedAt` moves when *anything* on the
+  issue changes, including this skill's own `--add-label` calls, so a run that labels 15 issues
+  guarantees its successor re-deep-dives all 15 for no reason. The prior tracking issue lists what
+  it wrote (see §8); subtract that set. Only skip the subtraction if the issue changed again
+  *after* the prior run finished — compare against the write, not just the run.
+  A live example of the cost: a Narraitor run saw 23 issues past the cursor and only 10 had
+  genuinely changed; the other 13 were the previous run's own label writes.
 - Plus a small random sample (~5) of the issues with the *oldest* `updatedAt` among everything not
   already selected — a drift-catcher. Pure incremental selection would never revisit an issue that
   got mislabeled once and never received a new comment again; this bounds that risk without
-  re-scanning the whole backlog every time.
+  re-scanning the whole backlog every time. **Rotate the sample** — if the prior tracking issue
+  records which issues it sampled, exclude those and take the next-oldest cohort. Re-sampling the
+  same five every run re-proves the same negative and catches no drift.
 - First run: no `Last run:` timestamp exists yet. Deep-dive the whole backlog once — this run will
   look bigger than steady-state, that's expected (see §7 in the parent plan / verification step).
 
@@ -91,7 +123,7 @@ For each selected issue, decide against the cached label list from §2:
 - **Never comment on the issue about a label change** — silent labeling only, matching Anthropic's
   own triage-issue command.
 - **Conservative bias**: a false positive is worse than a miss. Genuinely torn between two
-  categories, or between adding a lifecycle label and not → skip, flag in §6.
+  categories, or between adding a lifecycle label and not → skip, flag in §8.
 
 Apply: `gh issue edit [N] --add-label "x" --remove-label "y"`.
 
@@ -115,7 +147,10 @@ issue can legitimately be `model-power:frontier` — a one-file change that is a
 with no clear right answer. Don't collapse the two axes into one size.
 
 **Infer per-family exemptions from the backlog itself before filling anything in.** Some families
-deliberately don't apply to some issue types. Count coverage per family, split by issue type:
+deliberately don't apply to some issue types. Count coverage per family, split by issue type —
+using the typing mechanism established in §2b, not an ad-hoc reading of whatever labels look
+type-ish. If §2b couldn't determine one, skip this grouping and say so; an ungrouped run may still
+fill in labels missing from individual issues, but it cannot conclude that a type is exempt.
 
 - A family absent on *every* issue of a type (e.g. `model-power` on 10 of 10 epics) **may** be a
   convention — containers carry no size, their children do — but zero coverage cannot establish
@@ -176,7 +211,7 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 "post-MVP"/"v2"/"later", or its milestone targets a future phase).
 
 - No existing `priority:*` label → apply the computed tier directly (high confidence).
-- Existing label is `priority:high`/`medium`/`low` and its tier ≠ computed tier → **flag** in §7,
+- Existing label is `priority:high`/`medium`/`low` and its tier ≠ computed tier → **flag** in §8,
   don't overwrite — someone may have set it for a reason not visible in the score. Matching tiers
   need no action.
 - Existing label is `priority:post-mvp`, **or the repo carries a plain `post-mvp` topic label and
@@ -207,6 +242,26 @@ those, but list them with reasons in the report rather than dropping them silent
 suppression stays auditable. The same goes for anything a previous run's tracking issue explicitly
 dismissed — read the prior issue's comments, not just its body, and honour the decisions in them.
 
+**Getting "fresh" right needs the labeled event, not `updatedAt`.** A label object carries no
+timestamp, and the issue's `updatedAt` moves for any reason at all — one unrelated comment makes
+every label on the issue look fresh. Read the timeline instead, and only for the handful of issues
+where a suppression is actually being considered (it's a per-issue call, so don't sweep the
+backlog with it):
+
+```bash
+gh api repos/{owner}/{repo}/issues/{N}/timeline --paginate \
+  --jq '.[] | select(.event=="labeled" or .event=="unlabeled")
+        | {event, label: .label.name, actor: .actor.login, at: .created_at}'
+```
+
+**The actor matters as much as the timestamp**, and this is the part the rule missed: suppress a
+label the *maintainer* applied recently, because that is the deliberate decision the rule exists
+to respect. Do **not** suppress on a label a previous run of this skill applied — that is this
+skill's own guess, and treating it as fresh human triage means every guess it ever makes becomes
+permanently self-confirming. If the timeline is unavailable, say in the report that freshness was
+inferred from the prior tracking issue's record rather than measured, and don't present the
+suppression as though it rested on a timestamp.
+
 ## 8. Reporting — one tracking issue per run
 
 - Find the prior run: `gh issue list --state open --search "Issue maintenance run in:title"`,
@@ -217,6 +272,14 @@ dismissed — read the prior issue's comments, not just its body, and honour the
   options); **Repo notes** (labels not configured, anything skipped); a `Last run: <ISO
   timestamp>` line — the cursor §3's incremental selection reads on the next run; a link to the
   superseded run.
+- **Three machine-readable lines the next run depends on.** §3 and §7 are only as good as what the
+  previous run wrote down, so end the body with these even when a section is empty:
+  - `Wrote labels to: #N, #N, …` — every issue this run changed. §3 subtracts this set from the
+    `updatedAt` delta so the next run doesn't re-dive this run's own writes.
+  - `Drift sample: #N, #N, …` — the issues sampled this run, so the next run rotates past them.
+  - `Settled: <question> — <answer>` — one line per exemption or dismissal the maintainer resolved
+    (typically in a comment on this issue). §4b's coverage questions and §7's dismissals both read
+    this; without it, every run re-asks a question that was already answered.
 - Label the tracking issue from the existing set if one genuinely fits (e.g. `documentation`);
   otherwise leave it unlabeled rather than inventing a `maintenance` label.
 - Close the prior run once confirmed still open: `gh issue close [N] --comment "Superseded by
