@@ -115,16 +115,27 @@ issue can legitimately be `model-power:frontier` — a one-file change that is a
 with no clear right answer. Don't collapse the two axes into one size.
 
 **Infer per-family exemptions from the backlog itself before filling anything in.** Some families
-deliberately don't apply to some issue types, and the convention shows up as a clean zero rather
-than as a sentence in the doc. Count coverage per family, split by issue type:
+deliberately don't apply to some issue types. Count coverage per family, split by issue type:
 
-- A family that is absent on *every* issue of a type (e.g. `model-power` on 10 of 10 epics) is a
-  convention, not a gap. Containers carry no size; their children do. Don't fill these, and say in
-  the report that you read it as a convention so the maintainer can correct you if it isn't one.
-- A family that is *mostly but not always* present on a type (e.g. `complexity` on 6 of 10 epics)
-  is genuinely ambiguous. Don't auto-apply — raise it once as a single question covering all the
-  gaps, not as one flag per issue.
+- A family absent on *every* issue of a type (e.g. `model-power` on 10 of 10 epics) **may** be a
+  convention — containers carry no size, their children do — but zero coverage cannot establish
+  that on its own. A family that was only just introduced, or one drifting untouched in exactly
+  the way this pass exists to repair, also reads as 0 of N. Those states are indistinguishable
+  from a coverage count, so a clean zero is not permission to skip silently.
+- A family *mostly but not always* present on a type (e.g. `complexity` on 6 of 10 epics) is
+  ambiguous for the same reason.
+- Treat both the same way: **one question per family per type**, covering every gap at once —
+  never one flag per issue, and never a silent skip.
 - Everything else — a non-exempt issue with the label simply missing — is the auto-apply case.
+
+Either of these promotes a suspected exemption to a real one, and skips the question:
+
+- The convention doc says the family doesn't apply to that type.
+- The type's **closed** issues show the same clean zero — historical evidence the labels were
+  never used there, which a snapshot of open issues alone can't tell apart from drift.
+
+Once the maintainer answers, record the answer in the tracking issue so later runs read it as
+settled instead of asking again.
 
 **Scope**: unlike the priority pass, this one only fills in *missing* labels. Re-litigating an
 existing `complexity:medium` down to `small` is a judgment call against someone's own estimate of
@@ -187,7 +198,7 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 | Lifecycle label | clear presence/absence of repro/env info | partial or unclear signal |
 | Plain-language | exact mechanical swap from the unambiguous bucket | any jargon/verbosity/tone call |
 | Priority | no existing priority label | existing label's tier ≠ computed tier |
-| Sizing (complexity / model-power) | label missing, repo documents the tiers, issue type isn't exempt | no convention doc; type is partly-exempt; existing value the body contradicts |
+| Sizing (complexity / model-power) | label missing, repo documents the tiers, issue type isn't exempt | no convention doc; family absent or patchy across a whole issue type; existing value the body contradicts |
 
 One more rule that cuts across every row: **don't re-flag a label the maintainer set within the
 last few days.** A fresh label is a deliberate triage decision made with more context than the
