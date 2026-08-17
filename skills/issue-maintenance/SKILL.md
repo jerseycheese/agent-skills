@@ -5,7 +5,9 @@ description: >
   miscategorized or unlabeled issues (bug/enhancement/question/invalid/duplicate) and bug
   lifecycle labels (needs-repro/needs-info) following the same decision logic as Anthropic's own
   dogfooded triage-issue command; re-scores every open issue with prioritize-issues' value/effort/
-  age rubric and writes the resulting priority:high/medium/low/post-mvp label; applies mechanical
+  age rubric and writes the resulting priority:high/medium/low/post-mvp label; fills in missing
+  sizing labels (complexity/model-power or the repo's equivalent) where the repo documents a
+  convention for them; applies mechanical
   plain-language fixes (AI-tell swaps, filler removal) to issue title/body via the
   plain-language-audit skill and surfaces jargon/verbosity/tone judgment calls for review.
   Auto-applies high-confidence changes, flags ambiguous ones in a single tracking issue. Unlike
@@ -19,14 +21,17 @@ description: >
 # Issue Maintenance
 
 `prioritize-issues` reports; `analyze-issue` specs out one issue for implementation. This skill
-maintains — it mutates the backlog: labels, priority, and issue text. Three passes, one report.
+maintains — it mutates the backlog: labels, priority, and issue text. Four passes, one report.
 
 ## 0. Prerequisites
 
-- `gh` authenticated for the target repo.
+- `gh` authenticated for the target repo. If `gh` isn't installed (some hosted/cloud sessions),
+  every step below has a GitHub MCP equivalent (`mcp__github__list_issues`, `issue_read`,
+  `issue_write`, `get_label`) — same data, different transport. Say which you used in the report.
 - No repo clone. Everything here is issue metadata (title, body, comments, labels) via `gh issue`
   — skip the `mktemp -d` / `gh repo clone` step entirely, unlike `code-health-audit`'s and
-  `plain-language-audit`'s scheduled pattern. This skill never touches source files.
+  `plain-language-audit`'s scheduled pattern. This skill never touches source files. The one
+  exception is the label-convention doc in §4b, which is a single API file read, not a clone.
 
 ## 1. Discover the repo
 
@@ -52,7 +57,12 @@ Pass 4 (priority) always scores the *entire* open backlog every run — tiers ar
 (terciles), so closing or opening other issues shifts tier boundaries even for issues that didn't
 themselves change. That data comes free from the bulk list call above; no extra cost.
 
-Pass 3 (labels) and Pass 5 (wording) don't need a full re-check every run — an issue's own label
+Pass 2 (sizing) also sweeps the *entire* backlog, for a different reason: detecting a **missing**
+label is a set-difference over the bulk fetch, not a judgment, so restricting it to recently-touched
+issues would miss exactly the stale ones it exists to catch. Deciding the *value* for a missing
+label does need the body — which the bulk fetch already carries.
+
+Pass 1 (labels) and Pass 3 (wording) don't need a full re-check every run — an issue's own label
 or text doesn't depend on the rest of the backlog, and re-fetching comments plus re-running triage
 on an issue nobody touched since last week is pure waste. Build the deep-dive set as:
 
@@ -85,7 +95,54 @@ For each selected issue, decide against the cached label list from §2:
 
 Apply: `gh issue edit [N] --add-label "x" --remove-label "y"`.
 
-## 5. Pass 2 — Plain-language pass on title+body only (never comments)
+## 4b. Pass 2 — Sizing labels (complexity / model-power)
+
+Many repos carry sizing label families beyond priority — `complexity:*` (how much time/scope) and
+`model-power:*` (how much reasoning difficulty) are the common pair. These drift the same way
+priority does: freshly-filed issues get a category and a priority and then nobody comes back for
+the sizing ones.
+
+**Only run this pass if the repo documents what the tiers mean.** Look for a label-convention doc
+— `.github/labels.md` is the usual home, sometimes `CONTRIBUTING.md` — and read it via the API
+(`gh api repos/{owner}/{repo}/contents/.github/labels.md --jq .content | base64 -d`, or
+`mcp__github__get_file_contents`). No clone needed. If no such doc exists, **skip this pass
+entirely** and say so once in the report. Guessing what a repo means by `complexity:medium` from
+the label name alone is exactly the false positive the conservative bias exists to prevent.
+
+When the doc exists, follow it literally, including any statement that the families are
+independent. A doc that says complexity and model-power are orthogonal means a `complexity:small`
+issue can legitimately be `model-power:frontier` — a one-file change that is a genuine design call
+with no clear right answer. Don't collapse the two axes into one size.
+
+**Infer per-family exemptions from the backlog itself before filling anything in.** Some families
+deliberately don't apply to some issue types. Count coverage per family, split by issue type:
+
+- A family absent on *every* issue of a type (e.g. `model-power` on 10 of 10 epics) **may** be a
+  convention — containers carry no size, their children do — but zero coverage cannot establish
+  that on its own. A family that was only just introduced, or one drifting untouched in exactly
+  the way this pass exists to repair, also reads as 0 of N. Those states are indistinguishable
+  from a coverage count, so a clean zero is not permission to skip silently.
+- A family *mostly but not always* present on a type (e.g. `complexity` on 6 of 10 epics) is
+  ambiguous for the same reason.
+- Treat both the same way: **one question per family per type**, covering every gap at once —
+  never one flag per issue, and never a silent skip.
+- Everything else — a non-exempt issue with the label simply missing — is the auto-apply case.
+
+Either of these promotes a suspected exemption to a real one, and skips the question:
+
+- The convention doc says the family doesn't apply to that type.
+- The type's **closed** issues show the same clean zero — historical evidence the labels were
+  never used there, which a snapshot of open issues alone can't tell apart from drift.
+
+Once the maintainer answers, record the answer in the tracking issue so later runs read it as
+settled instead of asking again.
+
+**Scope**: unlike the priority pass, this one only fills in *missing* labels. Re-litigating an
+existing `complexity:medium` down to `small` is a judgment call against someone's own estimate of
+their own codebase, so an existing value is only ever flagged, never overwritten — and only when
+the issue body flatly contradicts it (a body that says "one-line change" under `complexity:large`).
+
+## 5. Pass 3 — Plain-language pass on title+body only (never comments)
 
 Same selected set as Pass 1. Apply `plain-language-audit`'s three lenses to the issue's title and
 body:
@@ -101,7 +158,7 @@ body:
 
 Apply: `gh issue edit [N] --body "..."` (and `--title "..."` if the pattern is in the title).
 
-## 6. Pass 3 — Re-prioritization
+## 6. Pass 4 — Re-prioritization
 
 Reuse the value/effort/age-bonus rubric verbatim from `prioritize-issues`:
 
@@ -122,7 +179,8 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 - Existing label is `priority:high`/`medium`/`low` and its tier ≠ computed tier → **flag** in §7,
   don't overwrite — someone may have set it for a reason not visible in the score. Matching tiers
   need no action.
-- Existing label is `priority:post-mvp` → **don't compare it against the computed tier at all.**
+- Existing label is `priority:post-mvp`, **or the repo carries a plain `post-mvp` topic label and
+  the issue has it** → **don't compare it against the computed tier at all.**
   Post-mvp is an intentional roadmap-sequencing override, not a score bucket — flagging every
   post-mvp issue whose formula score happens to land in a higher tercile is noise, not signal (a
   first live run on Narraitor's 93-issue backlog flagged 51 mismatches this way, only ~4 of which
@@ -140,6 +198,14 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 | Lifecycle label | clear presence/absence of repro/env info | partial or unclear signal |
 | Plain-language | exact mechanical swap from the unambiguous bucket | any jargon/verbosity/tone call |
 | Priority | no existing priority label | existing label's tier ≠ computed tier |
+| Sizing (complexity / model-power) | label missing, repo documents the tiers, issue type isn't exempt | no convention doc; family absent or patchy across a whole issue type; existing value the body contradicts |
+
+One more rule that cuts across every row: **don't re-flag a label the maintainer set within the
+last few days.** A fresh label is a deliberate triage decision made with more context than the
+formula has, and flagging it reads as the sweep second-guessing work someone just did. Suppress
+those, but list them with reasons in the report rather than dropping them silently, so the
+suppression stays auditable. The same goes for anything a previous run's tracking issue explicitly
+dismissed — read the prior issue's comments, not just its body, and honour the decisions in them.
 
 ## 8. Reporting — one tracking issue per run
 
