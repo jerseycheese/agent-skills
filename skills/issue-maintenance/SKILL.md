@@ -56,18 +56,22 @@ once in the report ("not configured in this repo") — don't repeat the note per
 Pass 2 groups label coverage **by issue type**, so the run needs to know what a "type" is here
 before it can group anything. Two mechanisms exist and repos use one or the other:
 
-- **GitHub native issue types** (Bug / Feature / Task and custom ones). Check with
-  `gh issue type list` or `mcp__github__list_issue_types`. If the repo has them configured, that
-  is the typing mechanism — fetch the type per issue in the §2 bulk call.
+- **GitHub native issue types** (Bug / Feature / Task and custom ones). There is no
+  `gh issue type` subcommand — since `gh` 2.94.0 issue types ride on the ordinary commands
+  (`--type` on create/edit, a type field on `list`/`view`), and before that they were reachable
+  only through the API. Detect them with `gh api repos/{owner}/{repo}/issue-types` or
+  `mcp__github__list_issue_types`. A 404 means this repo has none, which is the ordinary answer
+  for a personal-account repo — issue types are configured at organization level. If the repo does
+  have them, that is the typing mechanism: fetch the type per issue in the §2 bulk call.
 - **A type label convention** — `epic`, `bug`, `enhancement`, `user-story`, `documentation`, and
   so on. The convention doc from §4b usually names these outright (Narraitor's `.github/labels.md`
   has a `## Type Labels` section listing exactly six). Use that list as the type mapping rather
   than inventing one from whatever labels happen to look type-ish.
 
-Don't guess the field name for native types — it has moved between `gh` versions. Run
-`gh issue list --json` with no value and `gh` prints the valid field names for the installed
-version; pick the type field from that list. Via MCP, check what `list_issues` exposes and fall
-back to per-issue reads if the bulk call doesn't carry it.
+Don't guess the JSON field name for native types — it arrived in `gh` 2.94.0 and older versions
+don't carry it at all. Run `gh issue list --json` with no value and `gh` prints the valid field
+names for the installed version; pick the type field from that list. Via MCP, check what
+`list_issues` exposes and fall back to per-issue reads if the bulk call doesn't carry it.
 
 **State the mechanism in the report**, once: "types read from native issue types" or "types read
 from the label convention: `epic`, `bug`, …". A run that can't determine either **skips Pass 2's
@@ -101,9 +105,14 @@ on an issue nobody touched since last week is pure waste. Build the deep-dive se
 - Plus a small random sample (~5) of the issues with the *oldest* `updatedAt` among everything not
   already selected — a drift-catcher. Pure incremental selection would never revisit an issue that
   got mislabeled once and never received a new comment again; this bounds that risk without
-  re-scanning the whole backlog every time. **Rotate the sample** — if the prior tracking issue
-  records which issues it sampled, exclude those and take the next-oldest cohort. Re-sampling the
-  same five every run re-proves the same negative and catches no drift.
+  re-scanning the whole backlog every time.
+  **Rotate against a cumulative history, not just the previous run.** Excluding only the last
+  cohort doesn't actually rotate on a mostly-static backlog: sample the oldest five, then the next
+  five, and by the third run the first five are the oldest again while the only exclusion is
+  cohort two — so the sweep alternates between two cohorts forever and never reaches the rest of
+  the backlog. Carry every issue sampled since the last reset (§8 records the running set) and
+  exclude all of them. When the accumulated set has covered the backlog, clear it, start the cycle
+  again, and note the reset in the report.
 - First run: no `Last run:` timestamp exists yet. Deep-dive the whole backlog once — this run will
   look bigger than steady-state, that's expected (see §7 in the parent plan / verification step).
 
@@ -276,7 +285,10 @@ suppression as though it rested on a timestamp.
   previous run wrote down, so end the body with these even when a section is empty:
   - `Wrote labels to: #N, #N, …` — every issue this run changed. §3 subtracts this set from the
     `updatedAt` delta so the next run doesn't re-dive this run's own writes.
-  - `Drift sample: #N, #N, …` — the issues sampled this run, so the next run rotates past them.
+  - `Drift sampled (cumulative): #N, #N, …` — every issue sampled since the last cycle reset, not
+    just this run's five. §3 excludes the whole set; a one-run-deep list makes the sample alternate
+    between two cohorts instead of rotating through the backlog. Say so when the set wraps and
+    resets.
   - `Settled: <question> — <answer>` — one line per exemption or dismissal the maintainer resolved
     (typically in a comment on this issue). §4b's coverage questions and §7's dismissals both read
     this; without it, every run re-asks a question that was already answered.
