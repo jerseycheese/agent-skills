@@ -4,34 +4,59 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 
 ## Skills
 
-- **[abstraction-finder](skills/abstraction-finder/SKILL.md)** — Scan a codebase or area for recurring patterns that could be extracted into shared, general-purpose code. Proposes the smallest form per cluster with the call sites it replaces; enforces the rule of three. The DRY counterweight to KISS.
+Grouped by type. Each links to its `SKILL.md`.
+
+### Issue & backlog workflow
+
 - **[analyze-issue](skills/analyze-issue/SKILL.md)** — Read a GitHub issue and produce a technical spec with scope, patterns, and MVP tests.
-- **[band-aid-finder](skills/band-aid-finder/SKILL.md)** — Scan a change or area for fixes that suppress a symptom instead of resolving the cause; trace the root cause and propose the real fix. Allows deliberate, documented mitigations. The counterweight to KISS on the other axis.
-- **[browser-debugger-cli](skills/browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
-- **[ci-fix-with-memory](skills/ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
-- **[code-health-audit](skills/code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
-- **[cyoa](skills/cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
-- **[dead-code-cleanup](skills/dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
-- **[doc-rot](skills/doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
-- **[drupal-mental-model](skills/drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
-- **[ds-guard](skills/ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
-- **[evidence-check](skills/evidence-check/SKILL.md)** — Honesty gate for AI claims. Classifies each claim by evidence tier (verified / confirmed / inferred / unverified) and blocks guesses from being stated as fact. State claims default to unverified until a file's been read or a command run.
-- **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
-- **[kiss](skills/kiss/SKILL.md)** — Strip a diff down to the minimum surface needed for its goal. Drops the "while I'm here" extras.
-- **[plain-language-audit](skills/plain-language-audit/SKILL.md)** — Sweep comments, docs, and UI copy for jargon, AI writing tells, and verbosity. Auto-fixes the unambiguous stuff, surfaces judgment calls.
-- **[post-merge](skills/post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
-- **[pr-review-fix-pipeline](skills/pr-review-fix-pipeline/SKILL.md)** — Review a PR and apply fixes for the non-controversial issues in one pass.
 - **[prioritize-issues](skills/prioritize-issues/SKILL.md)** — Rank the backlog by value, effort, age, and roadmap fit. Returns a top-5 with specs for the top 3.
-- **[project-bootstrap](skills/project-bootstrap/SKILL.md)** — Stamp a new repo's agent scaffolding: a CLAUDE.md from the house template, starter settings, and a launch.json with a free port.
+- **[issue-maintenance](skills/issue-maintenance/SKILL.md)** — Periodic maintenance pass over the open-issue backlog: re-label, de-dupe, and flag stale issues. Never touches source files.
 - **[ship-issue](skills/ship-issue/SKILL.md)** — Drive one issue from cold start to merged PR: sync, analyze, minimal fix with a test, PR, CI green, post-merge cleanup, wrap-up.
-- **[skill-parity](skills/skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Gemini CLI, and shared `.agents/skills` paths.
+- **[post-merge](skills/post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
+
+### Code review & quality
+
+- **[kiss](skills/kiss/SKILL.md)** — Strip a diff down to the minimum surface needed for its goal. Drops the "while I'm here" extras.
+- **[abstraction-finder](skills/abstraction-finder/SKILL.md)** — Scan a codebase or area for recurring patterns that could be extracted into shared, general-purpose code. Proposes the smallest form per cluster with the call sites it replaces; enforces the rule of three. The DRY counterweight to KISS.
+- **[band-aid-finder](skills/band-aid-finder/SKILL.md)** — Scan a change or area for fixes that suppress a symptom instead of resolving the cause; trace the root cause and propose the real fix. Allows deliberate, documented mitigations. The counterweight to KISS on the other axis.
+- **[code-health-audit](skills/code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
+- **[pr-review-fix-pipeline](skills/pr-review-fix-pipeline/SKILL.md)** — Review a PR and apply fixes for the non-controversial issues in one pass.
+- **[evidence-check](skills/evidence-check/SKILL.md)** — Honesty gate for AI claims. Classifies each claim by evidence tier (verified / confirmed / inferred / unverified) and blocks guesses from being stated as fact. State claims default to unverified until a file's been read or a command run.
+
+### Testing
+
 - **[tdd-implement](skills/tdd-implement/SKILL.md)** — Red-green-refactor. Tests track acceptance criteria, not implementation details.
 - **[test-fix](skills/test-fix/SKILL.md)** — Diagnose and fix failing tests with a hard 3-attempt limit per failure to avoid debugging spirals.
 - **[test-workflow](skills/test-workflow/SKILL.md)** — Pick and run the right suite (unit, E2E, visual, CSS lint) after a source edit, before commit.
+- **[test-reaper](skills/test-reaper/SKILL.md)** — Find and remove dead or trivial tests — duplicates and tests that only assert a mock was called — after confirming the suite is green.
+
+### Cleanup — code, comments, docs, prose
+
+- **[dead-code-cleanup](skills/dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, stale stories, and trivial tests after verifying nothing uses them.
+- **[comment-reaper](skills/comment-reaper/SKILL.md)** — Remove unnecessary comments — the ones that restate the code — after reading the code under each to confirm it's redundant, not load-bearing.
+- **[doc-rot](skills/doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
+- **[plain-language-audit](skills/plain-language-audit/SKILL.md)** — Sweep comments, docs, and UI copy for jargon, AI writing tells, and verbosity. Auto-fixes the unambiguous stuff, surfaces judgment calls.
+
+### Frontend & visual
+
+- **[ds-guard](skills/ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
 - **[visual-crawl](skills/visual-crawl/SKILL.md)** — Crawl the running app at random breakpoints, screenshot regressions, check token consistency.
 - **[visual-qa-pipeline](skills/visual-qa-pipeline/SKILL.md)** — Take a visual crawl all the way to shipped work: triage findings, file Major+ as GitHub issues with screenshots, batch the small stuff, and open fix PRs for mechanical token violations. Schedulable.
+- **[browser-debugger-cli](skills/browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
+- **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
+
+### Dev environment, CI & setup
+
+- **[project-bootstrap](skills/project-bootstrap/SKILL.md)** — Stamp a new repo's agent scaffolding: a CLAUDE.md from the house template, starter settings, and a launch.json with a free port.
 - **[worktree-enhanced](skills/worktree-enhanced/SKILL.md)** — Set up a git worktree with branch, dev-server detection, and project-specific setup.
+- **[ci-fix-with-memory](skills/ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
+- **[skill-parity](skills/skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Gemini CLI, and shared `.agents/skills` paths.
+
+### Session & communication
+
 - **[wrap-it-up](skills/wrap-it-up/SKILL.md)** — Close out a chat with a tight summary and a sweep of related context files (memory, plans, status, logs).
+- **[cyoa](skills/cyoa/SKILL.md)** — Choose Your Own Adventure mode. Frame the task as a branching story; every fork is a real design decision.
+- **[drupal-mental-model](skills/drupal-mental-model/SKILL.md)** — Explain code by mapping framework concepts to Drupal equivalents, for a Drupal/theming background.
 
 ## Layout
 
