@@ -4,7 +4,9 @@ A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and a
 
 ## Skills
 
+- **[abstraction-finder](skills/abstraction-finder/SKILL.md)** — Scan a codebase or area for recurring patterns that could be extracted into shared, general-purpose code. Proposes the smallest form per cluster with the call sites it replaces; enforces the rule of three. The DRY counterweight to KISS.
 - **[analyze-issue](skills/analyze-issue/SKILL.md)** — Read a GitHub issue and produce a technical spec with scope, patterns, and MVP tests.
+- **[band-aid-finder](skills/band-aid-finder/SKILL.md)** — Scan a change or area for fixes that suppress a symptom instead of resolving the cause; trace the root cause and propose the real fix. Allows deliberate, documented mitigations. The counterweight to KISS on the other axis.
 - **[browser-debugger-cli](skills/browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
 - **[ci-fix-with-memory](skills/ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
 - **[code-health-audit](skills/code-health-audit/SKILL.md)** — The "embarrassing code" / overengineering sweep. Turns vague tech-debt into a short list of measurable, validated simplifications to ship.
