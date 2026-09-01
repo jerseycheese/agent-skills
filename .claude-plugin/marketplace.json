@@ -20,7 +20,9 @@
       ],
       "license": "MIT",
       "skills": [
+        "./skills/abstraction-finder",
         "./skills/analyze-issue",
+        "./skills/band-aid-finder",
         "./skills/browser-debugger-cli",
         "./skills/ci-fix-with-memory",
         "./skills/code-health-audit",
