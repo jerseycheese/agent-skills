@@ -35,8 +35,12 @@ that still reaches the cause — neither the smallest diff nor the largest refac
    fix that leaves the cause in place and only hides its effect is a band-aid.
 5. **Check for a legitimate mitigation.** Sometimes suppressing the symptom *is* the right call for
    now (see below). If so, it must be documented as deliberate with a follow-up — not left silent.
-6. **Propose the root-cause fix** concretely: where the real defect is and the change that resolves
-   it, landing in the right layer rather than patched at the call site.
+6. **Propose the fix — only once the cause is confirmed.** If step 2 confirmed the root cause,
+   propose the fix concretely: where the real defect is and the change that resolves it, landing in
+   the right layer rather than patched at the call site. If the cause is *not* confirmed, do not
+   prescribe a fix — report the evidence gap and the next verification step (the repro to run, the
+   file/path to read) instead. Prescribing a fix for an unconfirmed cause is the exact failure this
+   skill exists to catch.
 
 ## Band-aid signals
 

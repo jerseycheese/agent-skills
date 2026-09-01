@@ -101,8 +101,10 @@ as much as proposing a good one earns a good one.
 
 ## When Not to Use
 
-- Checking whether *one new change* matches existing patterns — that's a conformance check, the
-  inverse of this skill.
+- Reviewing whether *one specific diff* conforms to the project's existing conventions (naming,
+  structure, style) — that's a line-by-line conformance review of a change, not a duplication scan.
+  (Note: "is there already a shared helper for this?" is *in* scope — answering it is how this skill
+  decides whether to propose an extraction or point at what already exists.)
 - When the user wants a simplicity pass on a diff — use `kiss`.
 - Mid-feature — finish the feature; an extraction sweep is its own focused pass.
 
