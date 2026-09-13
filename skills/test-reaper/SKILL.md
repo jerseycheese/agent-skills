@@ -2,7 +2,8 @@
 name: test-reaper
 description: >
   Finds and removes dead or trivial tests - duplicates, tests that only assert a mock was called,
-  render checks that prove nothing, and suites whose name promises behavior they never observe.
+  render checks that prove nothing, negative reference/source scans that only prove retired text is
+  absent, and suites whose name promises behavior they never observe.
   Distinguishes a test that tests nothing from one that tests the wrong thing, because those need
   opposite fixes.
   Trigger on: "test reaper", "reap tests", "remove trivial tests", "dead tests", "useless tests",
@@ -17,6 +18,8 @@ description: >
 A test suite rots differently than source. Nothing goes red, nothing gets flagged, the count keeps climbing, and confidence quietly decouples from coverage. The tests that hurt most are not the broken ones - they're the ones that pass no matter what you do to the code.
 
 `dead-code-cleanup` already covers the classic markers: snapshot-only tests, `renders without crashing`, `.skip`, orphaned files. In a repo that has been kept up, those all return zero, and the sweep stops there having found nothing. This skill starts where that one runs out.
+
+Also watch for a newer kind of dead weight: a test added after deleting stale text/config/CSS that reads a file and asserts the old string is gone. Those tests feel like regression coverage, but most of them only make the deletion permanent in the narrowest possible way. If the old reference comes back, the real question is whether behavior broke; if no behavior is observed, the test is just a grep with a Jest wrapper.
 
 The distinction that drives every decision here: **a test that asserts nothing and a test that asserts the wrong thing are different problems.** The first is dead weight and gets reaped. The second is a coverage gap wearing a passing test as a disguise, and reaping it silently drops the intent. Never treat them the same.
 
@@ -56,6 +59,10 @@ done
 # Mock-assertion-only candidates: every expect targets a mock and only checks call-ness
 grep -rn 'toHaveBeenCalled\|toHaveBeenCalledWith\|toHaveBeenCalledTimes' src --include='*.test.ts*' | wc -l
 
+# Negative source/reference guards: read a file/string and only assert retired text is absent
+rg -n "readFileSync|readFile|not\\.toContain|not\\.toMatch|not\\.toHaveProperty|does not|no longer|retired|removed|dead|dropped" \
+  src scripts __tests__ tests -g '*.test.*' -g '*.spec.*'
+
 # Name/behavior mismatch: suites promising integration or persistence
 find src -name '*integration*.test.ts*' -o -name '*persistence*.test.ts*'
 ```
@@ -63,6 +70,7 @@ find src -name '*integration*.test.ts*' -o -name '*persistence*.test.ts*'
 The two judgments grep can't make, which you make by reading:
 
 - **Is every assertion in this case a mock call-check?** If so it can only fail if the wiring changes, never if the behavior does.
+- **Is the case only a negative reference guard?** Source/content is read, a retired string/selector/key is asserted absent, and no positive behavior or output is observed. If yes, treat it as delete-or-rewrite, not automatic coverage.
 - **Does the test name promise something the body never observes?** A case called `should persist state changes to IndexedDB` that asserts an adapter mock was called has not observed persistence. That gap is the single strongest signal in this skill.
 
 ## The three tiers
@@ -73,6 +81,7 @@ The two judgments grep can't make, which you make by reading:
 - **Self-duplicating assertions.** A case that re-asserts exactly what an earlier case in the same describe already covered, often visible from a comment like `// Should still render without crashing` sitting above an assertion that the name renders. Delete the later one.
 - **Leaked `.only`.** Not a reap, a bug: it silently skips every other case in the file. Remove it and re-run the suite, because whatever it was hiding is about to surface.
 - **The classic markers, if present.** Snapshot-only cases, bare `expect(Component).toBeDefined()`, `renders without crashing` with no other assertion.
+- **Pure negative reference guards after a deletion.** If a test reads docs/source/CSS/config and only asserts a removed string, selector, key, or literal is absent, delete it when there is no corresponding positive invariant. Examples: "does not reference the removed template step", "does not carry retired selector X", or "has dropped old marketing phrase Y" with no behavior-level assertion.
 
 ### Tier 2 - propose in one batch
 
@@ -80,12 +89,14 @@ Present as one triaged list: `file:line`, current name, what it actually asserts
 
 - **Mock-assertion-only cases.** Flag as *rewrite or delete, your call*. Never auto-delete. Rank them by name/behavior mismatch, worst first: a file named `*.persistence.test.ts` or `*.integration.test.ts` that observes neither is the top of the list, because the name is a standing claim that the suite covers something it doesn't. For each, say what the honest version would assert - read the real state back, assert on the observable output - so "rewrite" is a concrete option and not just a deferral.
 - **Single-assertion render checks.** One `render()` plus one `toBeInTheDocument()`. In isolation this is often correct, so only flag where a file is *mostly* these. A file of eight cases that each render the component and check one different string is one parameterized case wearing eight hats.
+- **Negative migration guards with a real policy hiding underneath.** Some source scans should become a smaller positive policy test instead of being deleted. A CSS-token migration test that forbids literal values across the tree may be a real linter-like invariant; a one-off `not.toMatch(/old-class/)` usually is not. Keep the policy, remove the archaeology.
 - **Wrong-target tests.** Tests pinned to things that aren't behavior: UI polish (colors, spacing, class names), dev-tooling internals, implementation details that break on any refactor, over-mocked integration patterns. These fail on healthy changes and pass on broken ones.
 
 ### Tier 3 - never touch
 
 - **Anything that can fail for a real reason.** The bar is not "is this test interesting," it's "could this catch a regression." A boring test that guards a boring invariant stays.
 - **Regression anchors.** A test whose comment cites the bug it guards is doing exactly its job, however odd the assertion looks. The odd assertion is usually the point.
+- **Security/privacy redaction checks.** Negative assertions like `not.toContain(secret)` or `not.toHaveProperty('apiKey')` can be the behavior. Do not lump them in with deleted-reference guards.
 - **Tests that look trivial because the setup is global.** Back to pre-flight step 4: if `jest.setup.ts` auto-mocks the module, a mock assertion may be the only observation available. Judge it against what the harness makes possible.
 - **The last remaining test for a module.** Even a weak one is a smoke test. Rewrite it rather than leaving the module bare.
 
@@ -113,6 +124,7 @@ Deletions and rewrites go in **separate commits**. A reviewer can skim a deletio
 ## Don't
 
 - Don't delete a mock-only test to make a number go down. It's a coverage gap, and deleting it hides the gap instead of closing it.
+- Don't add a test whose only job is proving a deleted reference stayed deleted. If there is a real invariant, test the generated output, rendered UI, parser result, or reusable policy. If there is not, delete the stale reference and move on.
 - Don't judge a store or hook test without reading the global test setup first.
 - Don't reap into a red suite.
 - Don't skip the deliberate-break check because the suite is green. Green after deleting tests is the expected result whether you did it right or wrong.

@@ -2,7 +2,8 @@
 name: dead-code-cleanup
 description: >
   Identifies and removes dead/orphaned code, tests, and Storybook stories — including trivial tests
-  that check only obvious behavior or rare edge cases with no real value.
+  that check only obvious behavior, prove only that retired references are absent, or cover rare
+  edge cases with no real value.
   Always validates that code is truly unused before deleting anything.
   Trigger on: "remove dead code", "clean up unused files", "delete orphaned components",
   "find unused exports", "remove trivial tests", "clean up the codebase", "what code can we delete",
@@ -31,6 +32,7 @@ Systematically identifies dead, orphaned, and trivial code across the codebase i
 - **Pointless existence tests** - Tests that check if a component is defined
 - **Snapshot-only tests** - Tests with only snapshots and no behavior validation
 - **Duplicate tests** - Multiple tests checking the same exact behavior
+- **Negative reference guards** - Tests that read docs/source/CSS/config and only assert a removed string, selector, key, or literal is absent
 
 ### Trivial Storybook Stories
 - **No-value stories** - Stories that show the exact same thing as another story
@@ -147,11 +149,20 @@ find . -name "*.stories.tsx" -o -name "*.stories.ts"
 ❌ test('exists', () => { expect(Component).toBeDefined() })
 ❌ test('has correct snapshot', () => { expect(tree).toMatchSnapshot() })
 ❌ test('renders', () => { render(<Component />); expect(screen.getByRole('button')).toBeInTheDocument() })
+❌ test('does not reference removed template step', () => {
+  const content = fs.readFileSync('docs/world.md', 'utf8')
+  expect(content).not.toMatch(/Template step/)
+})
+❌ test('does not carry the retired selector', () => {
+  const css = fs.readFileSync('app.css', 'utf8')
+  expect(css).not.toMatch(/\.old-selector/)
+})
 
 // Non-trivial tests
 ✅ test('displays error when validation fails', () => { ... })
 ✅ test('submits form with correct data', () => { ... })
 ✅ test('calls callback when button clicked', () => { ... })
+✅ test('redacts the provider key from outgoing requests', () => { ... })
 ```
 
 **For stories, verify they're trivial**:
@@ -413,6 +424,8 @@ grep -r "toBeDefined()" src/ | grep -i component
 grep -r "toMatchSnapshot()" src/ | grep -v "// meaningful snapshot"
 grep -r "test('renders'" src/
 grep -r "it('renders'" src/
+grep -r "not.toContain\\|not.toMatch" src/ scripts/ __tests__/ tests/ --include="*.test.*" --include="*.spec.*"
+grep -r "readFileSync" src/ scripts/ __tests__/ tests/ --include="*.test.*" --include="*.spec.*"
 ```
 
 **Find potentially trivial stories**:
