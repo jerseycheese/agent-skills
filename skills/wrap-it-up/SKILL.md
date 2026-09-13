@@ -18,6 +18,11 @@ A short closing report with three parts. Keep it tight — colleague-over-coffee
 - **Summary** — 3–6 bullets of what was actually accomplished. Outcomes, not narration.
 - **Decisions** — anything we decided that future-me will need to know. One bullet each.
 - **Loose ends** — anything left unfinished, with a one-line next step. If there are none, say so.
+- **Two questions, answered straight:**
+  1. What are you (the AI) least confident about right now? Name the specific claim, fix, or assumption from this chat that's shakiest — not a generic disclaimer.
+  2. What's the biggest thing the user is missing about the situation? Something they don't realize, haven't asked about, or are underweighting. Not a restatement of the loose ends above.
+
+  Give a real, specific answer to both, grounded in this chat. If genuinely nothing qualifies for one of them, say so plainly rather than inventing a token answer — but that should be rare, not the default.
 
 If the chat was mostly exploration with no concrete output, say that. Don't fabricate accomplishments.
 
