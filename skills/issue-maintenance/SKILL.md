@@ -9,19 +9,22 @@ description: >
   sizing labels (complexity/model-power or the repo's equivalent) where the repo documents a
   convention for them; applies mechanical
   plain-language fixes (AI-tell swaps, filler removal) to issue title/body via the
-  plain-language-audit skill and surfaces jargon/verbosity/tone judgment calls for review.
+  plain-language-audit skill and surfaces jargon/verbosity/tone judgment calls for review; clusters
+  granular open issues that share a domain, keyword, or parent reference into suggested groupings
+  (shared epic, GitHub sub-issues, or a batched PR) for the maintainer to act on — report-only,
+  distinct from duplicate detection.
   Auto-applies high-confidence changes, flags ambiguous ones in a single tracking issue. Unlike
   prioritize-issues (read-only ranked report) or analyze-issue (single-issue technical spec), this
   skill WRITES to issues. Needs no repo clone — GitHub issue metadata only, via gh. Trigger on:
   "run issue maintenance", "maintain the issue backlog", "clean up and re-prioritize issues",
   "issue maintenance pass", "tidy the backlog", "weekly issue maintenance", "re-label and
-  re-prioritize open issues".
+  re-prioritize open issues", "group similar issues", "cluster related issues".
 ---
 
 # Issue Maintenance
 
 `prioritize-issues` reports; `analyze-issue` specs out one issue for implementation. This skill
-maintains — it mutates the backlog: labels, priority, and issue text. Four passes, one report.
+maintains — it mutates the backlog: labels, priority, and issue text. Five passes, one report.
 
 ## 0. Prerequisites
 
@@ -234,6 +237,46 @@ regardless of score when the issue shows an explicit deferral signal (body/title
   narrower, higher-signal check: the issue is telling on itself, not just scoring differently than
   expected.
 
+## 6b. Pass 5 — Similarity grouping (report-only, never mutates issue content)
+
+A backlog with many granular issues accumulates ones that would be better tracked, or worked,
+together — separate sub-tasks of one feature, three variants of the same bug, incremental slices of
+one enhancement. This pass finds those clusters and proposes what to do with them. **It is not
+duplicate detection**: a duplicate is the same issue filed twice and gets closed (§4 handles the rare
+one that surfaces incidentally; a dedicated sweep stays out of scope, see §9). A grouping candidate
+is two or more genuinely distinct issues that share enough surface to be worth tracking as a unit.
+
+Runs over the full open backlog from §2 — title, labels, and type from §2b are already in hand, no
+deep-dive needed to find candidates. Cluster on these signals, strongest first:
+
+- **Explicit parent reference** — an issue's body says "part of #N" / "child of #N" / "see #N" for
+  an issue that reads as a container, but the two aren't linked as GitHub sub-issues.
+- **Shared domain/component label plus overlapping title keywords** — two or more issues carrying
+  the same domain label whose titles share 2+ non-stopword terms (e.g. three separate "world
+  creation: step 3 validation" issues).
+- **Same type, same active milestone, adjacent scope** — several `enhancement`s in the active
+  milestone that read as incremental pieces of one feature rather than independent work.
+
+Label identity alone is never enough (every `bug` isn't a cluster) — a cluster needs the keyword,
+domain, or parent-reference overlap on top of shared labels.
+
+**Never auto-executes.** Filing a new epic, re-parenting issues as sub-issues, or closing one into
+another restructures the backlog, not a single field — that's a maintainer call every time:
+
+- Surface each cluster in the tracking issue (see §8) as a checklist line: the issue numbers, the
+  shared signal, and a proposed action (`convert to sub-issues of #N`, `file a new epic and
+  re-parent these N`, or `flag only — no clear parent`).
+- The one exception: if the repo supports GitHub sub-issues (`mcp__github__sub_issue_write`, or
+  `gh api repos/{owner}/{repo}/issues/{N}/sub_issues`) and a prior run's tracking issue recorded a
+  maintainer-approved pairing via a `Settled:` line, apply that one approved pairing. Every other
+  cluster, however obvious it looks, stays a suggestion until it's settled the same way.
+- **Carry unresolved clusters forward instead of re-suggesting them as new.** A cluster flagged in a
+  prior run and left unaddressed is still valid signal — reference the prior tracking issue's mention
+  rather than presenting it as a fresh finding, so the maintainer can see it's a repeat and weigh that.
+
+Skip this pass on backlogs under ~15 open issues and say so once — at that size the maintainer
+already holds the whole backlog in their head, and clustering noise dominates any real signal.
+
 ## 7. Confidence policy — what auto-applies vs what's flagged
 
 | Change | Auto-apply | Flag instead |
@@ -243,6 +286,7 @@ regardless of score when the issue shows an explicit deferral signal (body/title
 | Plain-language | exact mechanical swap from the unambiguous bucket | any jargon/verbosity/tone call |
 | Priority | no existing priority label | existing label's tier ≠ computed tier |
 | Sizing (complexity / model-power) | label missing, repo documents the tiers, issue type isn't exempt | no convention doc; family absent or patchy across a whole issue type; existing value the body contradicts |
+| Similarity grouping | one previously-approved parent/child pairing recorded via a prior `Settled:` line | every new cluster suggestion, always |
 
 One more rule that cuts across every row: **don't re-flag a label the maintainer set within the
 last few days.** A fresh label is a deliberate triage decision made with more context than the
@@ -278,11 +322,13 @@ suppression as though it rested on a timestamp.
 - Title: `Issue maintenance run — <YYYY-MM-DD>`.
 - Body sections: summary counts; **Auto-applied** (checklist, one line per issue with the change);
   **Flagged for review** (checklist, one line per issue with the specific call and the two
-  options); **Repo notes** (labels not configured, anything skipped); a `Last run: <ISO
+  options); **Suggested groupings** (checklist, one line per cluster: issue numbers, shared signal,
+  proposed action — mark carried-forward clusters as such rather than re-presenting them as new);
+  **Repo notes** (labels not configured, anything skipped); a `Last run: <ISO
   timestamp>` line — the cursor §3's incremental selection reads on the next run; a link to the
   superseded run.
-- **Three machine-readable lines the next run depends on.** §3 and §7 are only as good as what the
-  previous run wrote down, so end the body with these even when a section is empty:
+- **Four machine-readable lines the next run depends on.** §3, §6b, and §7 are only as good as what
+  the previous run wrote down, so end the body with these even when a section is empty:
   - `Wrote labels to: #N, #N, …` — every issue this run changed. §3 subtracts this set from the
     `updatedAt` delta so the next run doesn't re-dive this run's own writes.
   - `Drift sampled (cumulative): #N, #N, …` — every issue sampled since the last cycle reset, not
@@ -290,8 +336,13 @@ suppression as though it rested on a timestamp.
     between two cohorts instead of rotating through the backlog. Say so when the set wraps and
     resets.
   - `Settled: <question> — <answer>` — one line per exemption or dismissal the maintainer resolved
-    (typically in a comment on this issue). §4b's coverage questions and §7's dismissals both read
-    this; without it, every run re-asks a question that was already answered.
+    (typically in a comment on this issue). §4b's coverage questions, §6b's approved pairings, and
+    §7's dismissals all read this; without it, every run re-asks a question that was already
+    answered.
+  - `Groupings suggested (carried): #N+#M (signal), …` — every cluster suggested and not yet settled,
+    across every run since it first appeared, not just this run's new ones. §6b reads this so an
+    unaddressed cluster is presented as a repeat, not a fresh finding, and a cluster drops off the
+    list once its `Settled:` line resolves it.
 - Label the tracking issue from the existing set if one genuinely fits (e.g. `documentation`);
   otherwise leave it unlabeled rather than inventing a `maintenance` label.
 - Close the prior run once confirmed still open: `gh issue close [N] --comment "Superseded by
@@ -304,5 +355,6 @@ stay clear of GitHub's secondary rate limits.
 
 ## 9. Out of scope for v1
 
-Duplicate-detection sweeps, stale-issue auto-closing, and cross-repo runs. These are reasonable
-future extensions but not part of this pass — don't build them in speculatively.
+Dedicated duplicate-detection sweeps (§6b's similarity grouping is a distinct, in-scope pass — see
+§6b for the boundary between the two), stale-issue auto-closing, and cross-repo runs. These are
+reasonable future extensions but not part of this pass — don't build them in speculatively.
