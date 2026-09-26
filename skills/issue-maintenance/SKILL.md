@@ -10,15 +10,16 @@ description: >
   convention for them; applies mechanical
   plain-language fixes (AI-tell swaps, filler removal) to issue title/body via the
   plain-language-audit skill and surfaces jargon/verbosity/tone judgment calls for review; clusters
-  granular open issues that share a domain, keyword, or parent reference into suggested groupings
-  (shared epic, GitHub sub-issues, or a batched PR) for the maintainer to act on — report-only,
-  distinct from duplicate detection.
+  granular open issues that share a domain, keyword, or parent reference and, once a maintainer
+  approves a specific batch, merges them into one appropriately-sized consolidated ticket and closes
+  the originals into it — proposal-only until approved, distinct from duplicate detection.
   Auto-applies high-confidence changes, flags ambiguous ones in a single tracking issue. Unlike
   prioritize-issues (read-only ranked report) or analyze-issue (single-issue technical spec), this
   skill WRITES to issues. Needs no repo clone — GitHub issue metadata only, via gh. Trigger on:
   "run issue maintenance", "maintain the issue backlog", "clean up and re-prioritize issues",
   "issue maintenance pass", "tidy the backlog", "weekly issue maintenance", "re-label and
-  re-prioritize open issues", "group similar issues", "cluster related issues".
+  re-prioritize open issues", "group similar issues", "cluster related issues", "combine similar
+  issues into one ticket", "consolidate small issues".
 ---
 
 # Issue Maintenance
@@ -237,20 +238,24 @@ regardless of score when the issue shows an explicit deferral signal (body/title
   narrower, higher-signal check: the issue is telling on itself, not just scoring differently than
   expected.
 
-## 6b. Pass 5 — Similarity grouping (report-only, never mutates issue content)
+## 6b. Pass 5 — Similarity grouping: consolidate granular issues into one batch ticket
 
-A backlog with many granular issues accumulates ones that would be better tracked, or worked,
-together — separate sub-tasks of one feature, three variants of the same bug, incremental slices of
-one enhancement. This pass finds those clusters and proposes what to do with them. **It is not
-duplicate detection**: a duplicate is the same issue filed twice and gets closed (§4 handles the rare
-one that surfaces incidentally; a dedicated sweep stays out of scope, see §9). A grouping candidate
-is two or more genuinely distinct issues that share enough surface to be worth tracking as a unit.
+A backlog with many granular issues accumulates ones small enough, and similar enough, that they're
+better worked as one ticket than tracked (and reviewed, and PR'd) as N separate ones. This pass finds
+those clusters and, once approved, **merges them into a single new consolidated issue sized like a
+normal ticket** — not an epic that collects children, and not sub-issue re-parenting. The distinct
+originals get closed into it once the consolidated ticket exists. **It is not duplicate detection**:
+a duplicate is the same issue filed twice and gets closed outright (§4 handles the rare one that
+surfaces incidentally; a dedicated sweep stays out of scope, see §9). A consolidation candidate is
+two or more genuinely distinct, small issues that are cheaper to deliver and review as one unit of
+work than as separate ones.
 
 Runs over the full open backlog from §2 — title, labels, and type from §2b are already in hand, no
 deep-dive needed to find candidates. Cluster on these signals, strongest first:
 
 - **Explicit parent reference** — an issue's body says "part of #N" / "child of #N" / "see #N" for
-  an issue that reads as a container, but the two aren't linked as GitHub sub-issues.
+  an issue that reads as a container. This usually means the container issue itself is a better
+  consolidation seed than a two-issue cluster of its children.
 - **Shared domain/component label plus overlapping title keywords** — two or more issues carrying
   the same domain label whose titles share 2+ non-stopword terms (e.g. three separate "world
   creation: step 3 validation" issues).
@@ -260,19 +265,40 @@ deep-dive needed to find candidates. Cluster on these signals, strongest first:
 Label identity alone is never enough (every `bug` isn't a cluster) — a cluster needs the keyword,
 domain, or parent-reference overlap on top of shared labels.
 
-**Never auto-executes.** Filing a new epic, re-parenting issues as sub-issues, or closing one into
-another restructures the backlog, not a single field — that's a maintainer call every time:
+**Size the batch before proposing it.** The whole point is a ticket of *appropriate* size, not a
+mega-issue that swaps five small review cycles for one unreviewable one. Estimate each candidate's
+effort using `prioritize-issues`'s effort rubric (0-10, reusing the sizing labels from §4b where
+present instead of re-deriving effort from scratch). Group issues into a batch only while the summed
+effort stays within what one well-scoped ticket should be — roughly the "moderate complexity"
+ceiling, effort sum around 5-6 — and cap every batch at 5 issues regardless of effort sum, since
+review load doesn't scale linearly with ticket count once you're skimming five issues' worth of
+context in one sitting. A cluster larger than that splits into multiple appropriately-sized batches,
+not one oversized ticket — say so explicitly when a cluster gets split this way.
 
-- Surface each cluster in the tracking issue (see §8) as a checklist line: the issue numbers, the
-  shared signal, and a proposed action (`convert to sub-issues of #N`, `file a new epic and
-  re-parent these N`, or `flag only — no clear parent`).
-- The one exception: if the repo supports GitHub sub-issues (`mcp__github__sub_issue_write`, or
-  `gh api repos/{owner}/{repo}/issues/{N}/sub_issues`) and a prior run's tracking issue recorded a
-  maintainer-approved pairing via a `Settled:` line, apply that one approved pairing. Every other
-  cluster, however obvious it looks, stays a suggestion until it's settled the same way.
-- **Carry unresolved clusters forward instead of re-suggesting them as new.** A cluster flagged in a
-  prior run and left unaddressed is still valid signal — reference the prior tracking issue's mention
-  rather than presenting it as a fresh finding, so the maintainer can see it's a repeat and weigh that.
+**Never auto-executes the first time.** Filing the consolidated ticket and closing originals into it
+is a structural, hard-to-undo-cleanly change — the individual issues stop being independently
+trackable — so it's always a maintainer call before the first execution:
+
+- Surface each proposed batch in the tracking issue (see §8) as a checklist line: the issue numbers,
+  the shared signal, the estimated combined effort, and the proposed consolidated title.
+- The one exception: once a prior run's tracking issue recorded a maintainer-approved batch via a
+  `Settled:` line, **execute it**:
+  1. `gh issue create` with a title summarizing the batch and a body that: lists each original issue
+     (number, title, link) under its own subheading; preserves each original's acceptance criteria
+     verbatim as a nested checklist under that subheading; and adds one combined "Consolidated
+     acceptance criteria" section only if the maintainer's approval comment supplied one — don't
+     invent a merged criteria list the maintainer didn't ask for.
+  2. Apply the category, priority, and sizing labels to the new ticket the normal way (§4/§4b/§6),
+     scored against the *consolidated* body, not carried over from any one original.
+  3. Close each original with `gh issue close [N] --comment "Consolidated into #<new>."` — this
+     preserves the original's full text and history for anyone following an old link; nothing is
+     deleted.
+  Every other batch, however obvious it looks, stays a proposal until it's settled the same way.
+- **Carry unresolved batch proposals forward instead of re-suggesting them as new.** A batch proposed
+  in a prior run and left unaddressed is still valid signal — reference the prior tracking issue's
+  mention rather than presenting it as a fresh finding, so the maintainer can see it's a repeat and
+  weigh that. Re-estimate its combined effort each run — closing or filing other issues can shift
+  which cluster is still worth consolidating.
 
 Skip this pass on backlogs under ~15 open issues and say so once — at that size the maintainer
 already holds the whole backlog in their head, and clustering noise dominates any real signal.
@@ -286,7 +312,7 @@ already holds the whole backlog in their head, and clustering noise dominates an
 | Plain-language | exact mechanical swap from the unambiguous bucket | any jargon/verbosity/tone call |
 | Priority | no existing priority label | existing label's tier ≠ computed tier |
 | Sizing (complexity / model-power) | label missing, repo documents the tiers, issue type isn't exempt | no convention doc; family absent or patchy across a whole issue type; existing value the body contradicts |
-| Similarity grouping | one previously-approved parent/child pairing recorded via a prior `Settled:` line | every new cluster suggestion, always |
+| Similarity grouping (consolidation) | one previously-approved batch recorded via a prior `Settled:` line — creates the ticket and closes the originals | every new batch proposal, always |
 
 One more rule that cuts across every row: **don't re-flag a label the maintainer set within the
 last few days.** A fresh label is a deliberate triage decision made with more context than the
@@ -320,13 +346,15 @@ suppression as though it rested on a timestamp.
 - Find the prior run: `gh issue list --state open --search "Issue maintenance run in:title"`,
   confirm it's genuinely still open via `gh issue view [N] --json state` (search index can lag).
 - Title: `Issue maintenance run — <YYYY-MM-DD>`.
-- Body sections: summary counts; **Auto-applied** (checklist, one line per issue with the change);
+- Body sections: summary counts; **Auto-applied** (checklist, one line per issue with the change,
+  including any batch consolidated this run: new ticket number, originals closed into it);
   **Flagged for review** (checklist, one line per issue with the specific call and the two
-  options); **Suggested groupings** (checklist, one line per cluster: issue numbers, shared signal,
-  proposed action — mark carried-forward clusters as such rather than re-presenting them as new);
-  **Repo notes** (labels not configured, anything skipped); a `Last run: <ISO
-  timestamp>` line — the cursor §3's incremental selection reads on the next run; a link to the
-  superseded run.
+  options); **Proposed consolidations** (checklist, one line per batch: issue numbers, shared
+  signal, estimated combined effort, proposed consolidated title — mark carried-forward batches as
+  such rather than re-presenting them as new, and say when a cluster was split into more than one
+  batch to stay within the size cap); **Repo notes** (labels not configured, anything skipped); a
+  `Last run: <ISO timestamp>` line — the cursor §3's incremental selection reads on the next run; a
+  link to the superseded run.
 - **Four machine-readable lines the next run depends on.** §3, §6b, and §7 are only as good as what
   the previous run wrote down, so end the body with these even when a section is empty:
   - `Wrote labels to: #N, #N, …` — every issue this run changed. §3 subtracts this set from the
@@ -336,13 +364,13 @@ suppression as though it rested on a timestamp.
     between two cohorts instead of rotating through the backlog. Say so when the set wraps and
     resets.
   - `Settled: <question> — <answer>` — one line per exemption or dismissal the maintainer resolved
-    (typically in a comment on this issue). §4b's coverage questions, §6b's approved pairings, and
+    (typically in a comment on this issue). §4b's coverage questions, §6b's approved batches, and
     §7's dismissals all read this; without it, every run re-asks a question that was already
     answered.
-  - `Groupings suggested (carried): #N+#M (signal), …` — every cluster suggested and not yet settled,
-    across every run since it first appeared, not just this run's new ones. §6b reads this so an
-    unaddressed cluster is presented as a repeat, not a fresh finding, and a cluster drops off the
-    list once its `Settled:` line resolves it.
+  - `Consolidations proposed (carried): #N+#M+#P (signal, effort ~X), …` — every proposed batch not
+    yet settled, across every run since it first appeared, not just this run's new ones. §6b reads
+    this so an unaddressed batch is presented as a repeat, not a fresh finding, and a batch drops off
+    the list once its `Settled:` line resolves it (approved and executed, or explicitly declined).
 - Label the tracking issue from the existing set if one genuinely fits (e.g. `documentation`);
   otherwise leave it unlabeled rather than inventing a `maintenance` label.
 - Close the prior run once confirmed still open: `gh issue close [N] --comment "Superseded by
