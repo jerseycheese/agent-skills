@@ -22,6 +22,7 @@
       "skills": [
         "./skills/abstraction-finder",
         "./skills/analyze-issue",
+        "./skills/backlog-routing",
         "./skills/band-aid-finder",
         "./skills/browser-debugger-cli",
         "./skills/ci-fix-with-memory",
@@ -41,6 +42,7 @@
         "./skills/pr-review-fix-pipeline",
         "./skills/prioritize-issues",
         "./skills/project-bootstrap",
+        "./skills/route",
         "./skills/ship-issue",
         "./skills/skill-parity",
         "./skills/tdd-implement",
