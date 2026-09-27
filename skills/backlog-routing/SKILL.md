@@ -112,7 +112,9 @@ Propose what goes in a milestone and in what order.
 Turn the milestone into waves of batches, and write the run tracker.
 
 1. **Load state.**
-   - Open issues in the milestone, with bodies and comments.
+   - Open issues in the milestone, with bodies and comments. The `run-tracker` issue isn't work:
+     leave it out of batching, and if one already exists, update it in place instead of making
+     another.
    - Open PRs, and branches matching the batch prefix or an issue number. Anything already in
      motion is excluded. A leftover branch or worktree isn't proof it was abandoned: ask.
 2. **Dependencies.**
@@ -191,7 +193,8 @@ Runs after each merge the human makes.
 
 ### release `<milestone>`
 
-Runs when the milestone has no open issues. The tracker counts as open until this stage closes it.
+Runs when the only open issue left in the milestone is the `run-tracker` issue. This stage closes
+the tracker at the end.
 
 1. Open the release-prep PR the adapter describes (release notes entry, version bump) against the
    base branch.
