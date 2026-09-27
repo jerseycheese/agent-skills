@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backlog Run Board</title>
+<!--
+  Read-only board for a backlog-routing run. Reads the milestone's run-tracker issue (its
+  `backlog-routing:state` block) plus live PR, CI and review state from the GitHub API.
+  No build step, no dependencies, no backend.
+
+  URL params: ?repo=owner/name&milestone=v1.11   (or ?demo=1 for a sample run)
+  Token: optional, read-only, pasted into Settings; kept in this browser's localStorage only.
+-->
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --surface-2: #f0f0ed; --border: #dcdcd6;
+    --text: #1c1c1a; --muted: #62625c; --link: #1f5fbf;
+    --ok: #1e7a3c; --ok-bg: #e3f2e7; --bad: #b3261e; --bad-bg: #fbe4e2;
+    --warn: #8a5a00; --warn-bg: #fdf0d5; --pend: #5a5a8a; --pend-bg: #e8e8f4;
+    --bar: #2f6f4f; --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --border: #3a3a36;
+      --text: #ececE6; --muted: #a3a39b; --link: #8ab4ff;
+      --ok: #7fd49a; --ok-bg: #1d3325; --bad: #ff9a90; --bad-bg: #3d1f1c;
+      --warn: #f2c46b; --warn-bg: #3a2e14; --pend: #b9b9f0; --pend-bg: #2a2a40;
+      --bar: #6cc093;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27; --border: #3a3a36;
+    --text: #ececE6; --muted: #a3a39b; --link: #8ab4ff;
+    --ok: #7fd49a; --ok-bg: #1d3325; --bad: #ff9a90; --bad-bg: #3d1f1c;
+    --warn: #f2c46b; --warn-bg: #3a2e14; --pend: #b9b9f0; --pend-bg: #2a2a40;
+    --bar: #6cc093;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--link); }
+  main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 1.25rem; margin: 0; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .meta { color: var(--muted); font-size: 0.85rem; }
+  .actions { display: flex; gap: 8px; }
+  button { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  button:hover { background: var(--surface-2); }
+  .progress { margin: 12px 0 16px; }
+  .track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; background: var(--bar); }
+  .banner { padding: 10px 12px; border-radius: var(--radius); margin: 0 0 12px; font-size: 0.9rem; }
+  .banner.warn { background: var(--warn-bg); color: var(--warn); }
+  .banner.bad { background: var(--bad-bg); color: var(--bad); }
+  .banner.info { background: var(--surface-2); color: var(--muted); }
+  section.needs { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 16px; }
+  section.needs ul { margin: 0; padding-left: 18px; }
+  section.needs li { margin: 4px 0; overflow-wrap: anywhere; }
+  .board { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .col { background: var(--surface-2); border-radius: var(--radius); padding: 10px; min-width: 0; }
+  .col h2 { display: flex; justify-content: space-between; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px; margin-bottom: 8px; overflow-wrap: anywhere; }
+  .card .name { font-weight: 600; }
+  .card .row { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .pill { display: inline-block; font-size: 0.75rem; padding: 1px 8px; border-radius: 999px; margin: 4px 4px 0 0; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.pend { background: var(--pend-bg); color: var(--pend); }
+  .empty { color: var(--muted); font-size: 0.85rem; padding: 4px 2px; }
+  dialog { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    color: var(--text); width: min(460px, calc(100vw - 32px)); }
+  dialog label { display: block; font-size: 0.85rem; margin: 10px 0 4px; }
+  dialog input { width: 100%; font: inherit; padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  dialog p { font-size: 0.8rem; color: var(--muted); }
+  dialog .actions { justify-content: flex-end; margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1 id="title">Backlog run</h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="actions">
+      <button id="refresh" type="button">Refresh</button>
+      <button id="settings" type="button">Settings</button>
+    </div>
+  </header>
+  <div class="progress" id="progress" hidden>
+    <div class="meta" id="progress-label"></div>
+    <div class="track"><div class="fill" id="progress-fill"></div></div>
+  </div>
+  <div id="banners"></div>
+  <section class="needs" id="needs" hidden>
+    <h2>Needs you</h2>
+    <ul id="needs-list"></ul>
+  </section>
+  <div class="board" id="board"></div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog">
+    <strong>Settings</strong>
+    <label for="f-repo">Repository (owner/name)</label>
+    <input id="f-repo" autocomplete="off" placeholder="owner/name">
+    <label for="f-ms">Milestone</label>
+    <input id="f-ms" autocomplete="off" placeholder="v1.11">
+    <label for="f-token">GitHub token (optional, read-only)</label>
+    <input id="f-token" type="password" autocomplete="off" placeholder="github_pat_…">
+    <p>Stored only in this browser. Needs read access to issues, pull requests and checks.
+      Without a token: public repos only, about 60 requests an hour, manual refresh, and no
+      unresolved-thread counts.</p>
+    <div class="actions">
+      <button value="cancel" type="submit">Cancel</button>
+      <button value="save" id="f-save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const COLUMNS = [
+    ['waiting', 'Waiting'], ['dispatched', 'Dispatched'], ['pr-open', 'PR open'],
+    ['in-review', 'Ready for you'], ['merged', 'Merged'],
+  ];
+  const DROP_HOURS = 6;      // dispatched this long with no PR → possibly dropped
+  const STALE_HOURS = 2;     // state block older than this while batches are open → stale
+  const POLL_MS = 60_000;
+
+  // ---------- small helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+    set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch { /* storage blocked */ } },
+  };
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') n.className = v; else if (v != null) n.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) if (kid != null) n.append(kid.nodeType ? kid : String(kid));
+    return n;
+  };
+  const link = (href, text) => el('a', { href, target: '_blank', rel: 'noopener noreferrer' }, text);
+  const hoursSince = (iso, now) => iso ? (now - Date.parse(iso)) / 36e5 : null;
+  const ago = (iso, now) => {
+    const h = hoursSince(iso, now);
+    if (h == null || Number.isNaN(h)) return '';
+    if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
+    if (h < 48) return `${Math.round(h)}h`;
+    return `${Math.round(h / 24)}d`;
+  };
+
+  // ---------- config ----------
+  const params = new URLSearchParams(location.search);
+  const cfg = {
+    demo: params.get('demo') === '1',
+    repo: params.get('repo') || store.get('brb.repo'),
+    milestone: params.get('milestone') || store.get('brb.milestone'),
+    token: store.get('brb.token'),
+  };
+
+  // ---------- GitHub access ----------
+  async function gh(path) {
+    const headers = { Accept: 'application/vnd.github+json' };
+    if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
+    const res = await fetch(`https://api.github.com${path}`, { headers });
+    if (!res.ok) {
+      const msg = res.status === 403 || res.status === 429
+        ? 'GitHub rate limit or permission error. Add a token in Settings, or wait and refresh.'
+        : `GitHub returned ${res.status} for ${path}`;
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+  async function unresolvedThreads(owner, name, number) {
+    if (!cfg.token) return null;
+    const query = `query($o:String!,$n:String!,$p:Int!){repository(owner:$o,name:$n){pullRequest(number:$p){
+      reviewThreads(first:100){nodes{isResolved}}}}}`;
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${cfg.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { o: owner, n: name, p: number } }),
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const nodes = j?.data?.repository?.pullRequest?.reviewThreads?.nodes;
+    return Array.isArray(nodes) ? nodes.filter((t) => !t.isResolved).length : null;
+  }
+  // Rolls up both CI APIs: check runs and legacy commit statuses.
+  function ciRollup(checkRuns, statuses) {
+    const runs = (checkRuns || []).filter((r) => r.conclusion !== 'skipped');
+    const sts = statuses || [];
+    if (!runs.length && !sts.length) return 'none';
+    if (runs.some((r) => ['failure', 'cancelled', 'timed_out', 'action_required'].includes(r.conclusion))) return 'red';
+    if (sts.some((t) => t.state === 'failure' || t.state === 'error')) return 'red';
+    if (runs.some((r) => r.status !== 'completed') || sts.some((t) => t.state === 'pending')) return 'pending';
+    return 'green';
+  }
+  const parseStateBlock = (body) => {
+    const m = /<!--\s*backlog-routing:state\s*([\s\S]*?)-->/.exec(body || '');
+    if (!m) return { state: null, error: 'The tracker has no backlog-routing:state block yet.' };
+    try { return { state: JSON.parse(m[1]), error: null }; }
+    catch (e) { return { state: null, error: `The tracker's state block isn't valid JSON (${e.message}).` }; }
+  };
+
+  async function fetchInputs() {
+    const [owner, name] = cfg.repo.split('/');
+    const base = `/repos/${owner}/${name}`;
+    let ms = null;
+    for (let page = 1; !ms; page += 1) {
+      const batch = await gh(`${base}/milestones?state=all&per_page=100&page=${page}`);
+      ms = batch.find((m) => m.title === cfg.milestone) || null;
+      if (batch.length < 100) break;
+    }
+    if (!ms) throw new Error(`No milestone named "${cfg.milestone}" in ${cfg.repo}.`);
+
+    const trackers = await gh(`${base}/issues?labels=run-tracker&milestone=${ms.number}&state=all&per_page=10`);
+    const tracker = trackers.find((t) => t.state === 'open') || trackers[0] || null;
+    const { state, error } = tracker ? parseStateBlock(tracker.body) : { state: null, error: null };
+
+    const openPulls = await gh(`${base}/pulls?state=open&per_page=100`);
+    const prefix = `batch/${cfg.milestone}-`;
+    const batchPulls = openPulls.filter((p) => p.head.ref.startsWith(prefix));
+
+    const batches = state?.batches || [];
+    const wanted = new Set(batches.map((b) => b.pr).filter(Boolean));
+    for (const b of batches) {
+      if (!b.pr) {
+        const hit = batchPulls.find((p) => p.head.ref === `${prefix}${b.slug}`);
+        if (hit) { b.pr = hit.number; wanted.add(hit.number); }
+      }
+    }
+    const prs = {};
+    await Promise.all([...wanted].map(async (n) => {
+      const pr = await gh(`${base}/pulls/${n}`);
+      const [checks, combined, reviews, unresolved] = await Promise.all([
+        gh(`${base}/commits/${pr.head.sha}/check-runs?per_page=100`),
+        gh(`${base}/commits/${pr.head.sha}/status`),
+        gh(`${base}/pulls/${n}/reviews?per_page=100`),
+        unresolvedThreads(owner, name, n),
+      ]);
+      const latest = {};
+      for (const r of reviews) latest[r.user?.login] = r.state;
+      prs[n] = {
+        number: n, url: pr.html_url, merged: pr.merged, state: pr.state,
+        conflict: pr.mergeable_state === 'dirty', updatedAt: pr.updated_at,
+        ci: ciRollup(checks.check_runs, combined.statuses),
+        changesRequested: Object.values(latest).includes('CHANGES_REQUESTED'),
+        unresolved,
+      };
+    }));
+
+    const issueStates = {};
+    const mergedIssues = batches.filter((b) => b.pr && prs[b.pr]?.merged).flatMap((b) => b.issues || []);
+    await Promise.all(mergedIssues.map(async (n) => {
+      issueStates[n] = (await gh(`${base}/issues/${n}`)).state;
+    }));
+
+    const untracked = batchPulls
+      .filter((p) => !wanted.has(p.number))
+      .map((p) => ({ number: p.number, url: p.html_url, ref: p.head.ref }));
+
+    return {
+      repo: cfg.repo,
+      milestone: { title: ms.title, url: ms.html_url, open: ms.open_issues, closed: ms.closed_issues },
+      tracker: tracker ? { number: tracker.number, url: tracker.html_url } : null,
+      state, stateError: error, prs, issueStates, untracked,
+    };
+  }
+
+  // ---------- derive the view (pure) ----------
+  function derive(input, now) {
+    const { state, prs, issueStates } = input;
+    const cards = [];
+    const needs = [];
+    const flags = [];
+    const issueUrl = (n) => `https://github.com/${input.repo}/issues/${n}`;
+
+    for (const b of state?.batches || []) {
+      const pr = b.pr ? prs[b.pr] : null;
+      // The tracker decides how far a batch has got; live PR state can only pull it back.
+      // A green PR stays in "PR open" until the orchestrator's review gate marks it in-review.
+      let col = b.status === 'dropped' ? 'waiting' : (b.status || 'waiting');
+      const cardFlags = [];
+      if (pr) {
+        if (pr.merged) col = 'merged';
+        else if (pr.state !== 'open') {
+          col = 'waiting';
+          cardFlags.push(['bad', 'PR closed without merging']);
+        } else {
+          const healthy = pr.ci === 'green' && !pr.conflict && !pr.changesRequested && !(pr.unresolved > 0);
+          col = b.status === 'in-review' && healthy ? 'in-review' : 'pr-open';
+          if (b.status === 'in-review' && pr.unresolved == null && !cfg.token && !cfg.demo) {
+            cardFlags.push(['warn', 'add a token to check open threads']);
+          }
+        }
+      }
+      if (b.status === 'dropped') cardFlags.push(['warn', 'dropped, back to plan']);
+      if (col === 'dispatched' && !pr && hoursSince(b.dispatchedAt, now) > DROP_HOURS) {
+        cardFlags.push(['warn', `no PR after ${ago(b.dispatchedAt, now)}: possibly dropped`]);
+      }
+      if (pr && !pr.merged) {
+        if (pr.ci === 'red') cardFlags.push(['bad', 'CI red']);
+        if (pr.conflict) cardFlags.push(['bad', 'merge conflict']);
+        if (pr.changesRequested) cardFlags.push(['warn', 'changes requested']);
+        if (pr.unresolved > 0) cardFlags.push(['warn', `${pr.unresolved} open thread${pr.unresolved > 1 ? 's' : ''}`]);
+      }
+      if (pr?.merged) {
+        const open = (b.issues || []).filter((n) => issueStates[n] === 'open');
+        if (open.length) cardFlags.push(['warn', `merged but #${open.join(', #')} still open`]);
+      }
+      const since = pr ? pr.updatedAt : b.dispatchedAt;
+      cards.push({ b, pr, col, flags: cardFlags, since });
+
+      for (const [kind, text] of cardFlags) flags.push({ kind, text: `${b.slug}: ${text}`, url: pr?.url });
+      if (col === 'in-review') needs.push({ text: `Review and merge ${b.slug}`, url: pr.url });
+      if (b.localCheck && col !== 'merged') needs.push({ text: `Local check for ${b.slug}: ${b.localCheck}`, url: pr?.url });
+    }
+    for (const u of input.untracked || []) {
+      flags.push({ kind: 'warn', text: `PR from ${u.ref} isn't in the tracker`, url: u.url });
+    }
+    for (const n of state?.needsYou || []) needs.push({ text: n, url: input.tracker?.url });
+
+    const anyOpen = cards.some((c) => c.col !== 'merged');
+    const stale = state?.updated && anyOpen && hoursSince(state.updated, now) > STALE_HOURS;
+    return { cards, needs, flags, stale, issueUrl };
+  }
+
+  // ---------- render ----------
+  function render(input, now) {
+    const v = derive(input, now);
+    const ms = input.milestone;
+    $('title').textContent = `${ms.title} run`;
+    $('meta').replaceChildren(
+      link(`https://github.com/${input.repo}`, input.repo), ' · ',
+      input.tracker ? link(input.tracker.url, `tracker #${input.tracker.number}`) : 'no tracker', ' · ',
+      input.state?.updated ? `state updated ${ago(input.state.updated, now)} ago` : 'state never written',
+      ' · ', `checked ${new Date(now).toLocaleTimeString()}`,
+    );
+
+    const total = ms.open + ms.closed;
+    $('progress').hidden = total === 0;
+    $('progress-label').replaceChildren(link(ms.url, `${ms.closed} of ${total} issues closed`));
+    $('progress-fill').style.width = total ? `${(100 * ms.closed) / total}%` : '0';
+
+    const banners = [];
+    if (!input.tracker) banners.push(['info', 'No run tracker for this milestone. Run the backlog-routing plan stage to create one.']);
+    if (input.stateError) banners.push(['bad', input.stateError]);
+    if (v.stale) banners.push(['warn', `The tracker hasn't been updated in over ${STALE_HOURS} hours while batches are open. Is the orchestrator still checking in?`]);
+    $('banners').replaceChildren(...banners.map(([k, t]) => el('div', { class: `banner ${k}` }, t)));
+
+    const items = [...v.needs.map((n) => ({ ...n, kind: 'ok' })), ...v.flags];
+    $('needs').hidden = items.length === 0;
+    $('needs-list').replaceChildren(...items.map((n) => el('li', {},
+      n.kind === 'ok' ? null : el('span', { class: `pill ${n.kind}` }, n.kind === 'bad' ? 'blocked' : 'check'), ' ',
+      n.url ? link(n.url, n.text) : n.text)));
+
+    $('board').replaceChildren(...COLUMNS.map(([key, label]) => {
+      const cs = v.cards.filter((c) => c.col === key);
+      return el('div', { class: 'col' },
+        el('h2', {}, el('span', {}, label), el('span', {}, String(cs.length))),
+        cs.length ? cs.map((c) => card(c, v, now)) : el('div', { class: 'empty' }, 'Nothing here'));
+    }));
+  }
+
+  function card(c, v, now) {
+    const { b, pr } = c;
+    const ci = pr && !pr.merged && pr.ci !== 'red'  // red CI already shows as a flag
+      ? el('span', { class: `pill ${{ green: 'ok', red: 'bad', pending: 'pend', none: 'pend' }[pr.ci]}` },
+          { green: 'CI green', red: 'CI red', pending: 'CI running', none: 'no checks' }[pr.ci])
+      : null;
+    return el('div', { class: 'card' },
+      el('div', { class: 'name' }, b.slug),
+      el('div', { class: 'row' }, (b.issues || []).flatMap((n, i) => [i ? ', ' : '', link(v.issueUrl(n), `#${n}`)])),
+      el('div', { class: 'row' }, [b.seat || 'seat not set', b.where ? ` · ${b.where}` : '',
+        b.briefs > 1 ? ` · ${b.briefs} briefs` : '', b.wave ? ` · wave ${b.wave}` : ''].join('')),
+      el('div', { class: 'row' }, pr ? link(pr.url, `PR #${pr.number}`) : 'no PR yet',
+        c.since ? ` · ${ago(c.since, now)} in this state` : ''),
+      el('div', {}, ci, c.flags.map(([k, t]) => el('span', { class: `pill ${k}` }, t))),
+    );
+  }
+
+  // ---------- demo data ----------
+  function demoInput(now) {
+    const iso = (h) => new Date(now - h * 36e5).toISOString();
+    return {
+      repo: 'example/app',
+      milestone: { title: 'v2.3', url: '#', open: 7, closed: 5 },
+      tracker: { number: 101, url: '#' },
+      stateError: null,
+      state: {
+        milestone: 'v2.3', base: 'develop', updated: iso(0.4),
+        needsYou: ['Decide whether #88 stays in this milestone (blocked on a design call)'],
+        batches: [
+          { slug: 'settings-copy', wave: 1, issues: [81, 82], seat: 'Antigravity / Flash', where: 'local', briefs: 2, status: 'merged', pr: 201 },
+          { slug: 'ending-gate', wave: 1, issues: [84], seat: 'Codex / Sol', where: 'local', briefs: 1, status: 'in-review', pr: 202, localCheck: 'play one full session to an ending' },
+          { slug: 'header-nav', wave: 1, issues: [85], seat: 'Claude / Sonnet', where: 'cloud', briefs: 1, status: 'pr-open', pr: 203 },
+          { slug: 'parser-cleanup', wave: 1, issues: [86], seat: 'Antigravity / Flash', where: 'local', briefs: 1, status: 'dispatched', dispatchedAt: iso(9) },
+          { slug: 'image-fallbacks', wave: 1, issues: [87], seat: 'Codex / Sol', where: 'local', briefs: 1, status: 'dispatched', dispatchedAt: iso(1.5) },
+          { slug: 'old-attempt', wave: 1, issues: [91], seat: 'Antigravity / Flash', where: 'local', briefs: 1, status: 'pr-open', pr: 205 },
+          { slug: 'tour-migration', wave: 2, issues: [89, 90], seat: 'Claude / Opus', where: 'cloud', briefs: 1, status: 'waiting' },
+        ],
+      },
+      prs: {
+        201: { number: 201, url: '#', merged: true, state: 'closed', conflict: false, updatedAt: iso(20), ci: 'green', changesRequested: false, unresolved: 0 },
+        202: { number: 202, url: '#', merged: false, state: 'open', conflict: false, updatedAt: iso(2), ci: 'green', changesRequested: false, unresolved: 0 },
+        205: { number: 205, url: '#', merged: false, state: 'closed', conflict: false, updatedAt: iso(5), ci: 'green', changesRequested: false, unresolved: 0 },
+        203: { number: 203, url: '#', merged: false, state: 'open', conflict: false, updatedAt: iso(0.6), ci: 'red', changesRequested: false, unresolved: 2 },
+      },
+      issueStates: { 81: 'closed', 82: 'open' },
+      untracked: [{ number: 204, url: '#', ref: 'batch/v2.3-hotfix' }],
+    };
+  }
+
+  // ---------- wiring ----------
+  let timer = null;
+  async function load() {
+    const now = Date.now();
+    if (cfg.demo) { render(demoInput(now), now); return; }
+    if (!cfg.repo || !cfg.milestone || !/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) {
+      $('banners').replaceChildren(el('div', { class: 'banner info' },
+        'Pick a repository and milestone in Settings, or add ?repo=owner/name&milestone=v1.0 to the URL. ?demo=1 shows a sample run.'));
+      return;
+    }
+    $('refresh').disabled = true;
+    try { render(await fetchInputs(), now); }
+    catch (e) { $('banners').replaceChildren(el('div', { class: 'banner bad' }, e.message)); }
+    finally { $('refresh').disabled = false; }
+  }
+  function schedule() {
+    clearInterval(timer);
+    if (cfg.token && !cfg.demo) timer = setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
+  }
+
+  $('refresh').addEventListener('click', load);
+  $('settings').addEventListener('click', () => {
+    $('f-repo').value = cfg.repo; $('f-ms').value = cfg.milestone; $('f-token').value = cfg.token;
+    $('dlg').showModal();
+  });
+  $('dlg').addEventListener('close', () => {
+    if ($('dlg').returnValue !== 'save') return;
+    cfg.repo = $('f-repo').value.trim(); cfg.milestone = $('f-ms').value.trim(); cfg.token = $('f-token').value.trim();
+    store.set('brb.repo', cfg.repo); store.set('brb.milestone', cfg.milestone); store.set('brb.token', cfg.token);
+    const p = new URLSearchParams(location.search);
+    p.delete('demo'); cfg.demo = false;
+    if (cfg.repo) p.set('repo', cfg.repo); if (cfg.milestone) p.set('milestone', cfg.milestone);
+    history.replaceState(null, '', `${location.pathname}?${p}`);
+    schedule(); load();
+  });
+
+  schedule();
+  load();
+})();
+</script>
+</body>
+</html>

@@ -146,7 +146,8 @@ Turn the milestone into waves of batches, and write the run tracker.
    - the waves and the collision owners
    - a brief, rendered from `templates/brief.md`
 
-   The tracker is where the live state lives, so no manifest gets committed per run.
+   The tracker is where the live state lives, so no manifest gets committed per run. Fill in its
+   `backlog-routing:state` block too (section 6).
 7. If new issues land in the milestone mid-run, re-run `plan`. It re-plans the waves that haven't
    started and leaves running batches alone.
 
@@ -174,7 +175,8 @@ Before launching, show the `route` block for each batch in the wave and wait for
   run out of disk. A cloud session spends the same subscription window as local use of that
   provider. Use one only when `route` puts the batch on that provider and its proof doesn't need
   anything local-only.
-- **Record each launch** in the tracker (batch, seat, session or card link, time started). Log each
+- **Record each launch** in the tracker (batch, seat, session or card link, time started), and set
+  the batch's `status` to `dispatched` with `dispatchedAt` in the state block. Log each
   route with `route`'s logger, passing the chosen seat whenever it differs from the recommendation.
 
 ### review gate
@@ -197,7 +199,8 @@ Runs on each batch PR once CI is green on its head.
    - what proves it (the check run, gate output)
    - the **Local check before merge** steps, if any
 
-   Then tell the user. That queue is the human's inbox.
+   Set the batch's `pr` and `status` in the state block, and `localCheck` if one is needed. Then
+   tell the user. That queue is the human's inbox.
 
 ### close-out
 
@@ -205,7 +208,8 @@ Runs after each merge the human makes.
 
 1. `post-merge` for the linked issues: close with a completion comment and tick the acceptance
    criteria.
-2. Mark the batch merged in the tracker. Check squash merges by content, not ancestry.
+2. Mark the batch merged in the tracker and its state block. Check squash merges by content, not
+   ancestry.
 3. **Check every issue actually shipped.** For each issue the batch named, confirm the merged PR
    closes it and its diff touches that issue's files. On a seat known to drop work, a batch can
    merge with one issue silently skipped. Put any dropped issue back into `plan`, and note what
@@ -294,3 +298,34 @@ highest-throughput seat for implementation:
 - `templates/brief.md`: the per-batch brief, vendor-neutral, pasteable anywhere.
 - `templates/tracker.md`: the run tracker issue body.
 - `templates/intake-issue.md`: the extra sections intake adds to every issue.
+
+## 6. Dashboard
+
+`dashboard/index.html` is a read-only board for a run: one self-contained page, no build step, no
+backend. It reads the tracker's `backlog-routing:state` block, then layers live GitHub state on
+top: PR state, CI on the PR head, review decisions, unresolved threads, and milestone progress.
+It flags what needs a look:
+
+- a batch dispatched more than 6 hours ago with no PR (possibly dropped)
+- red CI or a merge conflict
+- a merged batch whose issues are still open
+- a `batch/<milestone>-*` PR the tracker doesn't know about
+- a state block that hasn't been updated in 2 hours while batches are open
+
+Every card links out to GitHub. Reviewing and merging still happen there.
+
+**Keeping it accurate.** Every stage that edits the tracker rewrites the state block in the same
+edit, and bumps `updated`. The block must stay valid JSON; the page shows a parse error rather
+than guessing.
+
+**Opening it.**
+- Locally: open the file with
+  `?repo=owner/name&milestone=vX.Y` on the end. `?demo=1` shows a sample run.
+- Hosted: turn on GitHub Pages for the repo that holds this skill, and open
+  `…/skills/backlog-routing/dashboard/?repo=…&milestone=…`, from a phone too.
+
+**Token.** Optional, pasted into Settings, stored only in that browser. Use a fine-grained,
+read-only token with Issues, Pull requests and Checks (or Commit statuses) read access on the repo.
+Without one, the page works on public repos only (about 60 requests an hour, manual refresh) and
+can't count unresolved review threads.
+

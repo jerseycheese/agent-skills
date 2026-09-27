@@ -3,6 +3,33 @@
 <!-- Issue body for the run tracker. Label: run-tracker. Milestone: {milestone}.
 The orchestrator edits this in place. The human reads "Review queue" and "Needs you". -->
 
+<!-- backlog-routing:state
+{
+  "milestone": "{milestone}",
+  "base": "{base}",
+  "updated": "{ISO 8601 timestamp of this edit}",
+  "needsYou": [],
+  "batches": [
+    {
+      "slug": "{slug}",
+      "wave": 1,
+      "issues": [123],
+      "seat": "{provider} / {model}",
+      "where": "local",
+      "briefs": 1,
+      "status": "waiting",
+      "dispatchedAt": null,
+      "pr": null,
+      "localCheck": null
+    }
+  ]
+}
+-->
+<!-- The block above is what the dashboard reads (dashboard/index.html). Keep it valid JSON and
+rewrite it in the same edit as the tables below. status: waiting | dispatched | pr-open |
+in-review | merged | dropped. where: local | cloud. pr: the PR number once one exists.
+localCheck: the local check the human still has to run, or null. needsYou: short strings. -->
+
 **Milestone:** {link} · **Base:** `{base}` · **Last updated:** {timestamp}
 
 ## Review queue
