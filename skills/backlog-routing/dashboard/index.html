@@ -197,11 +197,14 @@
     const nodes = j?.data?.repository?.pullRequest?.reviewThreads?.nodes;
     return Array.isArray(nodes) ? nodes.filter((t) => !t.isResolved).length : null;
   }
-  function ciRollup(checkRuns) {
+  // Rolls up both CI APIs: check runs and legacy commit statuses.
+  function ciRollup(checkRuns, statuses) {
     const runs = (checkRuns || []).filter((r) => r.conclusion !== 'skipped');
-    if (!runs.length) return 'none';
+    const sts = statuses || [];
+    if (!runs.length && !sts.length) return 'none';
     if (runs.some((r) => ['failure', 'cancelled', 'timed_out', 'action_required'].includes(r.conclusion))) return 'red';
-    if (runs.some((r) => r.status !== 'completed')) return 'pending';
+    if (sts.some((t) => t.state === 'failure' || t.state === 'error')) return 'red';
+    if (runs.some((r) => r.status !== 'completed') || sts.some((t) => t.state === 'pending')) return 'pending';
     return 'green';
   }
   const parseStateBlock = (body) => {
@@ -214,8 +217,12 @@
   async function fetchInputs() {
     const [owner, name] = cfg.repo.split('/');
     const base = `/repos/${owner}/${name}`;
-    const milestones = await gh(`${base}/milestones?state=all&per_page=100`);
-    const ms = milestones.find((m) => m.title === cfg.milestone);
+    let ms = null;
+    for (let page = 1; !ms; page += 1) {
+      const batch = await gh(`${base}/milestones?state=all&per_page=100&page=${page}`);
+      ms = batch.find((m) => m.title === cfg.milestone) || null;
+      if (batch.length < 100) break;
+    }
     if (!ms) throw new Error(`No milestone named "${cfg.milestone}" in ${cfg.repo}.`);
 
     const trackers = await gh(`${base}/issues?labels=run-tracker&milestone=${ms.number}&state=all&per_page=10`);
@@ -237,8 +244,9 @@
     const prs = {};
     await Promise.all([...wanted].map(async (n) => {
       const pr = await gh(`${base}/pulls/${n}`);
-      const [checks, reviews, unresolved] = await Promise.all([
+      const [checks, combined, reviews, unresolved] = await Promise.all([
         gh(`${base}/commits/${pr.head.sha}/check-runs?per_page=100`),
+        gh(`${base}/commits/${pr.head.sha}/status`),
         gh(`${base}/pulls/${n}/reviews?per_page=100`),
         unresolvedThreads(owner, name, n),
       ]);
@@ -247,7 +255,7 @@
       prs[n] = {
         number: n, url: pr.html_url, merged: pr.merged, state: pr.state,
         conflict: pr.mergeable_state === 'dirty', updatedAt: pr.updated_at,
-        ci: ciRollup(checks.check_runs),
+        ci: ciRollup(checks.check_runs, combined.statuses),
         changesRequested: Object.values(latest).includes('CHANGES_REQUESTED'),
         unresolved,
       };
@@ -281,15 +289,23 @@
 
     for (const b of state?.batches || []) {
       const pr = b.pr ? prs[b.pr] : null;
+      // The tracker decides how far a batch has got; live PR state can only pull it back.
+      // A green PR stays in "PR open" until the orchestrator's review gate marks it in-review.
       let col = b.status === 'dropped' ? 'waiting' : (b.status || 'waiting');
+      const cardFlags = [];
       if (pr) {
         if (pr.merged) col = 'merged';
-        else if (pr.state === 'open') {
-          const clean = pr.ci === 'green' && !pr.conflict && !pr.changesRequested && !(pr.unresolved > 0);
-          col = clean ? 'in-review' : 'pr-open';
+        else if (pr.state !== 'open') {
+          col = 'waiting';
+          cardFlags.push(['bad', 'PR closed without merging']);
+        } else {
+          const healthy = pr.ci === 'green' && !pr.conflict && !pr.changesRequested && !(pr.unresolved > 0);
+          col = b.status === 'in-review' && healthy ? 'in-review' : 'pr-open';
+          if (b.status === 'in-review' && pr.unresolved == null && !cfg.token && !cfg.demo) {
+            cardFlags.push(['warn', 'add a token to check open threads']);
+          }
         }
       }
-      const cardFlags = [];
       if (b.status === 'dropped') cardFlags.push(['warn', 'dropped, back to plan']);
       if (col === 'dispatched' && !pr && hoursSince(b.dispatchedAt, now) > DROP_HOURS) {
         cardFlags.push(['warn', `no PR after ${ago(b.dispatchedAt, now)}: possibly dropped`]);
@@ -388,16 +404,18 @@
         needsYou: ['Decide whether #88 stays in this milestone (blocked on a design call)'],
         batches: [
           { slug: 'settings-copy', wave: 1, issues: [81, 82], seat: 'Antigravity / Flash', where: 'local', briefs: 2, status: 'merged', pr: 201 },
-          { slug: 'ending-gate', wave: 1, issues: [84], seat: 'Codex / Sol', where: 'local', briefs: 1, status: 'pr-open', pr: 202, localCheck: 'play one full session to an ending' },
+          { slug: 'ending-gate', wave: 1, issues: [84], seat: 'Codex / Sol', where: 'local', briefs: 1, status: 'in-review', pr: 202, localCheck: 'play one full session to an ending' },
           { slug: 'header-nav', wave: 1, issues: [85], seat: 'Claude / Sonnet', where: 'cloud', briefs: 1, status: 'pr-open', pr: 203 },
           { slug: 'parser-cleanup', wave: 1, issues: [86], seat: 'Antigravity / Flash', where: 'local', briefs: 1, status: 'dispatched', dispatchedAt: iso(9) },
           { slug: 'image-fallbacks', wave: 1, issues: [87], seat: 'Codex / Sol', where: 'local', briefs: 1, status: 'dispatched', dispatchedAt: iso(1.5) },
+          { slug: 'old-attempt', wave: 1, issues: [91], seat: 'Antigravity / Flash', where: 'local', briefs: 1, status: 'pr-open', pr: 205 },
           { slug: 'tour-migration', wave: 2, issues: [89, 90], seat: 'Claude / Opus', where: 'cloud', briefs: 1, status: 'waiting' },
         ],
       },
       prs: {
         201: { number: 201, url: '#', merged: true, state: 'closed', conflict: false, updatedAt: iso(20), ci: 'green', changesRequested: false, unresolved: 0 },
         202: { number: 202, url: '#', merged: false, state: 'open', conflict: false, updatedAt: iso(2), ci: 'green', changesRequested: false, unresolved: 0 },
+        205: { number: 205, url: '#', merged: false, state: 'closed', conflict: false, updatedAt: iso(5), ci: 'green', changesRequested: false, unresolved: 0 },
         203: { number: 203, url: '#', merged: false, state: 'open', conflict: false, updatedAt: iso(0.6), ci: 'red', changesRequested: false, unresolved: 2 },
       },
       issueStates: { 81: 'closed', 82: 'open' },
