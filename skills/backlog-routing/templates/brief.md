@@ -14,6 +14,11 @@ For Codex or Gemini, paste the whole thing; the goal line becomes the stated fin
 - #{n}: {title}. Done when: {acceptance criteria, or "see issue"}
 - ...
 
+<!-- One-issue variant, for seats that drop multi-issue briefs: keep exactly one issue above and add
+"Already done on this branch by earlier briefs: #a, #b. Don't touch them." Only the last brief in the
+sequence opens the PR; earlier ones commit and push to the branch, then stop. Every brief after the
+first checks out the existing branch instead of creating it. -->
+
 ## Files
 - **You own:** {paths}
 - **Don't touch** (another batch owns them): {paths, and which batch}

@@ -4,9 +4,10 @@ description: >
   A milestone-driven system for working a GitHub backlog with several agents at once while a human
   stays the only merge gate. Seven stages, each run only when asked: intake (turn playtest notes,
   screenshots, or findings into labeled issues), shape (propose a milestone's contents and ordered
-  plan), plan (split the milestone into collision-free batches, route each to the cheapest capable
-  model and vendor, and pick cloud or local), dispatch (start the batches: cloud sessions driven by
-  /goal, local task cards, or paste-ready briefs for Codex and Gemini/Antigravity), review gate
+  plan), plan (split the milestone into collision-free batches, route each through the `route`
+  skill to the cheapest capable seat, and pick cloud or local), dispatch (start the batches:
+  paste-ready briefs for Antigravity and Codex, local task cards, or cloud sessions driven by
+  /goal), review gate
   (two-model review before the PR reaches the human), close-out (after each merge), and release
   (when the milestone empties). Repo-specific rules come from an adapter skill. Trigger on:
   "backlog routing", "route the backlog", "plan the milestone", "batch the milestone", "dispatch
@@ -25,6 +26,7 @@ which model**. The rest is delegated:
 
 | Need | Delegate to |
 |---|---|
+| Which provider and model | `route` (your routing table plus current burn) |
 | Ranking | `prioritize-issues` |
 | Labels, dedupe, clustering | `issue-maintenance` |
 | Visual finding triage | `visual-qa-pipeline` (its severity ladder) |
@@ -132,7 +134,9 @@ Turn the milestone into waves of batches, and write the run tracker.
 4. **Batch.** Group issues that share a domain and file set, so each batch is one reviewable PR:
    - Aim for 1–4 issues and a diff a person can read in one sitting.
    - Keep `needs-local` issues together, so the local check happens once.
-5. **Route** each batch (section 3): its tier, then a vendor and model, then a run location.
+5. **Route** each batch through `route` (section 3). That gives each batch a seat, a brief shape
+   (one brief, or one per issue), and a run location. It also gives each wave a lane count that
+   fits the 5-hour window. If `route` says to wait for a reset, the wave waits.
 6. **Write the tracker** from `templates/tracker.md`, as an issue labeled `run-tracker` in the
    milestone. For each batch it holds:
    - the waves and the collision owners
@@ -147,26 +151,36 @@ Turn the milestone into waves of batches, and write the run tracker.
 Launch a wave. Start only batches whose dependencies are merged, and say which ones are waiting on
 what.
 
-- **Cloud (Claude).** One cloud session per batch, created with the routed `model`. The first
-  message is `/goal <condition>` followed by the brief. Prefer a session per batch over worktrees
-  in one container: each session gets its own disk allowance and rate limits, and several
-  parallel `npm ci`s in one container will run out of disk.
-- **Local (Claude).** A suggested-task card (or a printed prompt, if the host has no cards)
+Before launching, show the `route` block for each batch in the wave and wait for the user's OK.
+`route` recommends; the user decides. Then, by seat:
+
+- **Antigravity / Codex (local).** Pin the brief (or briefs) in the tracker as copy-paste blocks,
+  and tell the user which tool and model to paste each into. On a seat that drops multi-issue
+  briefs, a batch of N issues becomes N briefs run one after another on the same branch, each
+  naming one issue. Those tools can't be launched from here, so the batch rejoins the system
+  through its branch name and PR (section 4).
+- **Claude (local).** A suggested-task card (or a printed prompt, if the host has no cards)
   carrying the brief. The user starts it on their machine in a worktree. Inside the session, the
   in-harness Agent tool with a `model` override is the lane mechanism. Child `claude -p` processes
   are not.
-- **Codex / Gemini (Antigravity or Gemini CLI).** Pin the brief in the tracker as a copy-paste
-  block and tell the user which tool and model to paste it into. Those tools can't be launched from
-  here, so the batch rejoins the system through its branch name and PR (section 4).
-- Record each launch in the tracker: batch, vendor/model, session or card link, time started.
+- **Claude (cloud).** One cloud session per batch, created with the routed `model`. The first
+  message is `/goal <condition>` followed by the brief. Prefer a session per batch over worktrees
+  in one container, so parallel installs don't run out of disk. Cloud Claude sessions spend the
+  same Claude window as everything else. Use them only when `route` puts the batch on Claude and
+  its proof doesn't need anything local-only.
+- **Record each launch** in the tracker (batch, seat, session or card link, time started). Log each
+  route with `route`'s logger, passing the chosen seat whenever it differs from the recommendation.
 
 ### review gate
 
 Runs on each batch PR once CI is green on its head.
 
 1. Two reviewers from different model families where available:
-   - the repo's own review skill (or a `code-review` pass) on a standard-tier Claude model
-   - Codex review, if the repo has it
+   - the seat `route` picks for the code review phase, which must not be the family that wrote
+     the batch
+   - an automated reviewer the repo already runs (Codex review, say)
+
+   Security, concurrency, and architectural diffs get the table's escalation seat.
 2. Verify every finding yourself before relaying it. Check the finding's commit against the PR
    head, since the lane may already have fixed it. Relay only real findings to the batch, which
    fixes them and pushes.
@@ -186,9 +200,13 @@ Runs after each merge the human makes.
 1. `post-merge` for the linked issues: close with a completion comment and tick the acceptance
    criteria.
 2. Mark the batch merged in the tracker. Check squash merges by content, not ancestry.
-3. Dispatch whatever that merge unblocked, if the user has said to keep the wave rolling.
+3. **Check every issue actually shipped.** For each issue the batch named, confirm the merged PR
+   closes it and its diff touches that issue's files. On a seat known to drop work, a batch can
+   merge with one issue silently skipped. Put any dropped issue back into `plan`, and note what
+   the recovery cost in the tracker, so the routing table's recovery rule has data behind it.
+4. Dispatch whatever that merge unblocked, if the user has said to keep the wave rolling.
    Otherwise list what's now ready.
-4. Keep a check-in scheduled (roughly hourly) while any batch PR is open. A quiet check-in writes
+5. Keep a check-in scheduled (roughly hourly) while any batch PR is open. A quiet check-in writes
    nothing.
 
 ### release `<milestone>`
@@ -205,24 +223,46 @@ the tracker at the end.
 
 ## 3. Routing
 
-A batch's tier is the **highest** tier among its issues. If a label contradicts the body, trust
-the body and say you overrode it.
+**`route` makes the call, not this skill.** Your routing table (see the `route` skill's setup)
+already says which seat leads each phase of work, and `route` adds current burn. Keeping a second
+table here would drift from yours. So for each batch, pass `route` the phase and the shape:
 
-| Tier | Claude | Codex | Gemini (Antigravity / CLI) |
-|---|---|---|---|
-| light: mechanical, narrow, unambiguous | haiku | — | Flash |
-| standard: well-scoped, follows an existing pattern | sonnet | default reasoning | Pro |
-| advanced: cross-cutting, real tradeoffs | opus | high reasoning | — |
-| frontier: architecture-level, high blast radius | not batched: orchestrator or human | — | — |
-| browser checks: walk a flow, eyeball a screen | — | — | Antigravity browser agent |
+| Stage or work | Phase to pass `route` |
+|---|---|
+| `intake`, `shape`, `plan` | planning, specs, architecture |
+| a batch of independent issues | bulk implementation |
+| a wave of independent batches | simple parallel dispatch |
+| batches that depend on each other, or need re-planning mid-run | complex orchestration |
+| review gate | code review |
+| a batch whose CI stays red | root-cause debugging |
+| `close-out`, `release`, tracker upkeep | anything unnamed |
 
-- **Default to Claude cloud.** Use the other vendors for **parallelism** (separate rate limits let
-  more batches run at once) and for work that has to happen on the user's machine anyway.
-- **Run location** is `local` when a batch has a `needs-local` issue, or when its proof needs
-  anything the adapter lists as local-only. Otherwise `cloud`.
-- **Cross-vendor review.** A batch written by one model family should be reviewed by another.
-- Record the route in the PR body: a `Lane: <vendor>/<model>, <cloud|local>` line, so the human
-  can see who did what.
+Also pass: how many issues the batch holds, how many batches run at once, and whether it's a
+`/goal` run. Those decide which usage window the work spends and whether a brief has to be split.
+
+**Rules that stay here:**
+
+- **Lane count comes from the window.** When `route` says the right seat is tight, run fewer lanes
+  in the wave rather than moving batches to a scarcer seat.
+- **Run location.** `local` when a batch has a `needs-local` issue, when its proof needs anything
+  the adapter lists as local-only, or when `route` puts it on a local-only tool (Antigravity,
+  Codex CLI). Otherwise `cloud`.
+- **Keep the orchestrator light.** The stages here are mostly mechanical, so run them on the
+  table's default seat, and escalate only for a genuinely hard `plan`. Run them where `route` can
+  read burn, usually the user's machine. A cloud orchestrator has to ask for a burn reading.
+- **Cross-family review.** The family that wrote a batch doesn't review it.
+- **Record the lane** in the PR body with a `Lane: <provider>/<model>, <cloud|local>` line, so the
+  human can see who did what.
+
+**Fallback, only when `route` can't run at all** (no table on this machine, no reading from the
+user). Use the issue's model-tier label, say the pick has no usage data behind it, and prefer the
+highest-throughput seat for implementation:
+
+| Tier label | Fallback seat |
+|---|---|
+| light, standard | the table's bulk-implementation seat, one issue per brief |
+| advanced | a strong reasoning seat |
+| frontier | not batched: the orchestrator or the human |
 
 ## 4. Conventions every lane follows
 
@@ -234,6 +274,9 @@ the body and say you overrode it.
   gate commands passing, the check run green, threads answered. It can't be "the code is good".
 - No lane uses a notification-wait tool to watch CI. Poll with a blocking loop, or end the turn and
   let the PR subscription wake it.
+- **One issue per brief on seats that drop work.** A multi-issue batch on such a seat runs as one
+  brief per issue on the shared branch. Each brief says which issues earlier briefs already
+  handled, and names its own issue only.
 - A lane that dies after pushing may still have left a PR. Check the branch and PR head before
   re-dispatching, and resume the old session rather than starting fresh.
 - Non-Claude tools read `AGENTS.md` (Codex) or `GEMINI.md` (Gemini). When a repo treats
