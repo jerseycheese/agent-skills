@@ -12,6 +12,7 @@ Grouped by type. Each links to its `SKILL.md`.
 - **[prioritize-issues](skills/prioritize-issues/SKILL.md)** — Rank the backlog by value, effort, age, and roadmap fit. Returns a top-5 with specs for the top 3.
 - **[issue-maintenance](skills/issue-maintenance/SKILL.md)** — Periodic maintenance pass over the open-issue backlog: re-label, de-dupe, and flag stale issues. Never touches source files.
 - **[ship-issue](skills/ship-issue/SKILL.md)** — Drive one issue from cold start to merged PR: sync, analyze, minimal fix with a test, PR, CI green, post-merge cleanup, wrap-up.
+- **[backlog-routing](skills/backlog-routing/SKILL.md)** — Work a milestone with many agents at once: intake findings into issues, shape the milestone, split it into collision-free batches, route each to the cheapest capable model and vendor (Claude, Codex, Gemini) in cloud or local, review with a second model family, and hand the human a review queue. Nothing merges without them. Needs a small per-repo adapter skill.
 - **[post-merge](skills/post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
 
 ### Code review & quality
