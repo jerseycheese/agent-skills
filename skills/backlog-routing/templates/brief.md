@@ -1,9 +1,10 @@
 # Batch brief: {milestone} / {slug}
 
-<!-- Vendor-neutral. For a Claude cloud session, send the /goal line first, then this whole brief.
-For Codex or Gemini, paste the whole thing; the goal line becomes the stated finish condition. -->
+<!-- Vendor-neutral. If the tool has a goal command (`/goal` in Claude Code), send the Goal line
+through it first, then this whole brief. Otherwise paste the whole thing; the Goal line becomes the
+stated finish condition. -->
 
-/goal PR from `batch/{milestone}-{slug}` is open against `{base}`, this session has shown {gate commands} passing on the final commit, CI is green on the PR head, and every review thread is answered
+**Goal:** PR from `batch/{milestone}-{slug}` is open against `{base}`, this session has shown {gate commands} passing on the final commit, CI is green on the PR head, and every review thread is answered
 
 **Lane:** {vendor}/{model}, {cloud|local}
 

@@ -19,6 +19,15 @@ repo.
 | Burn reader | `$AI_BUDGET_DIR/read-burn.sh --human` | Treat every seat's burn as unknown and say so. |
 | Route logger | `$AI_BUDGET_DIR/log-route.sh` | Skip logging and say so once. |
 
+The two scripts are yours to write, and both are optional. The skill only needs this much from
+them:
+
+- `read-burn.sh --human` prints one line per seat and window: provider, model or plan, window
+  (5h or weekly), percent **used**, reset time, and the number's source (exact, estimate, STALE,
+  or unknown).
+- `log-route.sh <app> <phase> <recommended> [chosen]` appends one line with a timestamp to
+  wherever you keep the log.
+
 In a cloud session none of these exist. Ask the user for their table and a burn reading (a
 screenshot or pasted dashboard is fine). If they can't give one, say the call has no usage data
 behind it and fall back to the table's first choice for that row.
@@ -44,7 +53,8 @@ behind it and fall back to the table's first choice for that row.
 
 ## Output
 
-Exactly three lines. No preamble, no alternatives the user didn't ask for.
+Exactly three lines. No preamble, no alternatives the user didn't ask for. (The provider names
+below are only examples; use whatever seats your table names.)
 
 ```
 PHASE:  implementation
@@ -71,9 +81,14 @@ headed with the batch name.
 
 ## Which window the work spends
 
+Most subscription plans meter usage in two windows: a short rolling one (5 hours on most current
+plans) and a longer quota (usually weekly). The rest of this section uses "5-hour" and "weekly"
+for those. Swap in your plans' real windows.
+
 Decide this before comparing seats. The seats differ far more on one window than the other.
 
-A `/goal` run, a multi-lane batch, or anything that keeps working across turns spends the
+An autonomous goal run (`/goal` in Claude Code, say), a multi-lane batch, or anything that keeps
+working across turns spends the
 **5-hour message allowance**. Compare 5h windows and per-window message caps, not weekly
 balances. A premium reasoning seat can carry as few as 10–100 messages per 5h, so a batch drains
 it within minutes however much of its weekly is left. That's why a high-throughput seat leads the
@@ -91,9 +106,9 @@ recommend waiting. Be stricter about this for parallel runs, which multiply the 
 
 ## Sizing a brief
 
-Some seats finish the first issue in a multi-issue brief and silently drop the rest. Gemini Flash
-in Antigravity has done this more than once, including when the brief was an explicit written
-handoff naming every issue. So for anything spanning several issues on such a seat, recommend one
+Some seats finish the first issue in a multi-issue brief and silently drop the rest. It's been
+reported with at least one fast, high-throughput model, including when the brief was an explicit
+written handoff naming every issue. So for anything spanning several issues on such a seat, recommend one
 brief per issue, not one brief listing them all. The routing table's rules name which seats this
 applies to.
 

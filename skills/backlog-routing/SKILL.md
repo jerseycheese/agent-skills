@@ -6,8 +6,8 @@ description: >
   screenshots, or findings into labeled issues), shape (propose a milestone's contents and ordered
   plan), plan (split the milestone into collision-free batches, route each through the `route`
   skill to the cheapest capable seat, and pick cloud or local), dispatch (start the batches:
-  paste-ready briefs for Antigravity and Codex, local task cards, or cloud sessions driven by
-  /goal), review gate
+  paste-ready briefs for tools that can't be launched from the orchestrator, local agent sessions,
+  or cloud agent sessions driven by a goal condition), review gate
   (two-model review before the PR reaches the human), close-out (after each merge), and release
   (when the milestone empties). Repo-specific rules come from an adapter skill. Trigger on:
   "backlog routing", "route the backlog", "plan the milestone", "batch the milestone", "dispatch
@@ -36,6 +36,10 @@ which model**. The rest is delegated:
 | Claims of done | `evidence-check` |
 
 Don't re-implement any of those here.
+
+**Requirements.** GitHub for issues, milestones, sub-issues and PRs (`gh`, or a GitHub MCP
+server). Any agent host works for the orchestrator. Where this skill names a specific tool (Claude
+Code, Codex, Antigravity), it's an example of a kind of lane, not a requirement.
 
 ## 0. The adapter comes first
 
@@ -154,20 +158,22 @@ what.
 Before launching, show the `route` block for each batch in the wave and wait for the user's OK.
 `route` recommends; the user decides. Then, by seat:
 
-- **Antigravity / Codex (local).** Pin the brief (or briefs) in the tracker as copy-paste blocks,
-  and tell the user which tool and model to paste each into. On a seat that drops multi-issue
+- **Paste-brief lanes** (tools the orchestrator can't launch, such as Antigravity or the Codex CLI).
+  Pin the brief (or briefs) in the tracker as copy-paste blocks, and tell the user which tool and
+  model to paste each into. On a seat that drops multi-issue
   briefs, a batch of N issues becomes N briefs run one after another on the same branch, each
   naming one issue. Those tools can't be launched from here, so the batch rejoins the system
   through its branch name and PR (section 4).
-- **Claude (local).** A suggested-task card (or a printed prompt, if the host has no cards)
-  carrying the brief. The user starts it on their machine in a worktree. Inside the session, the
-  in-harness Agent tool with a `model` override is the lane mechanism. Child `claude -p` processes
-  are not.
-- **Claude (cloud).** One cloud session per batch, created with the routed `model`. The first
-  message is `/goal <condition>` followed by the brief. Prefer a session per batch over worktrees
-  in one container, so parallel installs don't run out of disk. Cloud Claude sessions spend the
-  same Claude window as everything else. Use them only when `route` puts the batch on Claude and
-  its proof doesn't need anything local-only.
+- **Local agent sessions.** A task the user starts on their machine in a worktree, carrying the
+  brief. Use a suggested-task card if the host has them, otherwise a printed prompt. In Claude Code,
+  sub-lanes inside a session use the in-harness Agent tool with a `model` override; child
+  `claude -p` processes don't work as lanes.
+- **Cloud agent sessions.** One cloud session per batch, created with the routed model, whose
+  first message sets the goal condition and then gives the brief (`/goal <condition>` in Claude
+  Code). Prefer a session per batch over worktrees in one container, so parallel installs don't
+  run out of disk. A cloud session spends the same subscription window as local use of that
+  provider. Use one only when `route` puts the batch on that provider and its proof doesn't need
+  anything local-only.
 - **Record each launch** in the tracker (batch, seat, session or card link, time started). Log each
   route with `route`'s logger, passing the chosen seat whenever it differs from the recommendation.
 
@@ -238,7 +244,7 @@ table here would drift from yours. So for each batch, pass `route` the phase and
 | `close-out`, `release`, tracker upkeep | anything unnamed |
 
 Also pass: how many issues the batch holds, how many batches run at once, and whether it's a
-`/goal` run. Those decide which usage window the work spends and whether a brief has to be split.
+autonomous goal run. Those decide which usage window the work spends and whether a brief has to be split.
 
 **Rules that stay here:**
 
@@ -270,7 +276,7 @@ highest-throughput seat for implementation:
   stale local checkout.
 - One PR per batch, body rendered from the repo's template, with every covered issue linked
   (`Closes #n`).
-- The brief's `/goal` condition has to be something the session can **show** in its own output:
+- The brief's goal condition has to be something the session can **show** in its own output:
   gate commands passing, the check run green, threads answered. It can't be "the code is good".
 - No lane uses a notification-wait tool to watch CI. Poll with a blocking loop, or end the turn and
   let the PR subscription wake it.
@@ -279,9 +285,9 @@ highest-throughput seat for implementation:
   handled, and names its own issue only.
 - A lane that dies after pushing may still have left a PR. Check the branch and PR head before
   re-dispatching, and resume the old session rather than starting fresh.
-- Non-Claude tools read `AGENTS.md` (Codex) or `GEMINI.md` (Gemini). When a repo treats
-  `CLAUDE.md` as canon, symlink those locally rather than keeping copies. Skills go in
-  `.agents/skills/` for those tools; see `skill-parity`.
+- Each tool reads its own instruction file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, and so on).
+  Keep one canonical file and symlink the others locally rather than keeping copies. Shared skills
+  go in `.agents/skills/`; see `skill-parity`.
 
 ## 5. Templates
 

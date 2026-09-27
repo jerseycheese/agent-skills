@@ -28,8 +28,8 @@ Read left to right within a row: first choice, then escalation.
 **Cheapest-capable first.** Each row lists models in ascending scarcity. Escalate only when the
 first choice visibly struggles, not preemptively.
 
-**Batches are metered by the 5-hour window, not the weekly.** Compare per-window caps for `/goal`
-runs and multi-lane batches.
+**Batches are metered by the 5-hour window, not the weekly.** Compare per-window caps for
+autonomous goal runs and multi-lane batches.
 
 **One issue per brief on seats that drop work.** Name the seats here, with the dates you saw it.
 
