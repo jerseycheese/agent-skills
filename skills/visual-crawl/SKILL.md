@@ -23,6 +23,7 @@ Randomized visual QA using `bdg` (browser-debugger-cli). Opens the project, craw
 User says `/visual-crawl` or asks for a visual QA pass. Before starting, confirm:
 1. **Project URL** (e.g., `http://localhost:4173`)
 2. **Route list** — discover from router config or ask the user
+3. **Dynamic/parameterized routes** (`/items/[id]`, `/users/:id`, etc.) — do any exist, and do they need seeded data to render real content instead of a 404 or empty state? See "Seeding data for dynamic routes" in Phase 0 below.
 
 For keyboard-navigated apps (sections accessed via key bindings rather than URL routing), ask the user for the key-to-section mapping and use `bdg dom pressKey` to navigate.
 
@@ -57,6 +58,49 @@ guard || exit 1
 ```
 
 If `guard` fails: `bdg stop && bdg <correct-url>`, wait, re-pin with `bdg cdp Page.navigate`, and re-verify before continuing.
+
+### Phase 0.5: Seeding data for dynamic routes (if needed)
+
+Many apps store state client-side (localStorage, IndexedDB, a Redux/Zustand `persist` layer) rather than a server database, so a dynamic route like `/worlds/[id]` or `/items/:id` 404s or renders empty on a fresh crawl unless something exists to view. Skipping these routes loses real coverage — detail, edit, and nested views are exactly where layout bugs hide.
+
+**Check for an existing seeding convention first.** Most projects with any E2E/visual-regression testing already have one — a Playwright `seedTestData`/`addInitScript` helper, a Cypress fixture loader, a storybook decorator. Search for it (`grep -rl "addInitScript\|seedTestData\|seed.*fixture" tests/ e2e/ cypress/`) before improvising; reusing the project's own seed data keeps the crawl's dynamic-route content realistic instead of inventing placeholder data that doesn't match the app's actual shapes.
+
+**Port it to `bdg` if it's Playwright-only.** `bdg cdp Page.addScriptToEvaluateOnNewDocument --params '{"source": "..."}'` runs before any page script on the *next* navigation — the same timing as Playwright's `page.addInitScript`. Take the project's existing seed logic (usually: write records into `localStorage`/IndexedDB, set a `window.__TEST__`-style flag some apps check to expose their store on `window` or skip auth) and inline it as a standalone script with the actual fixture data embedded, since the injected script runs outside the project's own module system and can't `import` anything:
+
+```bash
+# 1. If fixtures are TypeScript-only (used only by Playwright), dump them to JSON
+#    without hand-transcribing — Node 20.6+/22+ can run .ts directly:
+node --experimental-strip-types -e "
+import('./tests/fixtures/whatever.fixture.ts').then(function(m) {
+  require('fs').writeFileSync('/tmp/fixture.json', JSON.stringify(m.SAMPLE_DATA));
+});
+"
+# Type-only imports in that file must use `import type`, or stripping fails.
+
+# 2. Build the seed script with the fixture data inlined, then wrap it as CDP params
+#    with a proper JSON encoder (python json.dumps / node JSON.stringify) rather than
+#    hand-escaping quotes — these scripts get long and quoting by hand WILL break.
+python3 -c "
+import json
+source = open('/tmp/seed-init-script.js').read()
+print(json.dumps({'source': source}))
+" > /tmp/seed-params.json
+
+bdg cdp Page.addScriptToEvaluateOnNewDocument --params "$(cat /tmp/seed-params.json)"
+bdg cdp Page.navigate --params '{"url":"http://localhost:PORT/"}'
+sleep 2
+```
+
+**Verify seeding actually worked before trusting any dynamic route.** Have the seed script set a flag (`window.__TEST_SEEDED__ = true`) and check it, then navigate to one seeded dynamic URL and confirm real content rendered — not a 404 or empty state:
+
+```bash
+bdg dom eval "window.__TEST_SEEDED__"   # expect true
+bdg cdp Page.navigate --params '{"url":"http://localhost:PORT/items/seeded-id-123"}'
+sleep 2
+bdg dom eval "document.body.innerText.slice(0,200)"   # sanity-check it's real content
+```
+
+If seeding fails or is flaky, don't burn the whole run on it — drop the dynamic routes from this pass and note the coverage gap in the findings report rather than crawling 404 pages.
 
 ### Phase 1: Randomize the Run
 
@@ -511,6 +555,7 @@ This ensures cumulative coverage — run it 5 times and you've thoroughly audite
 - **`CSS.forcePseudoState` doesn't affect `bdg dom screenshot`.** It changes what `getComputedStyle()` reports (reliable for diffing resting vs. forced state) but the screenshot pipeline renders the actual resting state regardless — a screenshot taken right after forcing `:hover` will look identical to the unforced one even when the computed style genuinely changed. Use the computed-style diff to detect the bug, and a REAL mouse hover (multi-step `mouseMoved`, not a single dispatch) if you need a screenshot as evidence.
 - **`bdg dom screenshot --selector` can use a stale bounding box after a scroll.** If you `scrollIntoView()` or the page auto-scrolls (e.g. a tour) and then screenshot by selector without re-measuring, you can get a crop of the wrong region entirely — not a rendering bug, a tooling artifact. Re-query `getBoundingClientRect()` immediately before shooting, or fall back to a full-page screenshot to sanity-check the region.
 - **A single `mouseMoved` dispatch usually doesn't trigger `:hover`.** Move through 2-3 intermediate points before the target coordinates, then confirm with `el.matches(':hover')` before trusting the result.
+- **Seeded data without a matching "onboarding complete" flag can auto-launch a first-run guided tour** (react-joyride, driver.js, Shepherd, etc.) mid-crawl, painting a full-viewport dark backdrop that looks exactly like a rendering bug (a big solid-color region with no visible content) but isn't. Before filing a suspiciously large empty/dark area as a layout bug, check for tour markers (`[class*='joyride']`, `[class*='tour']`, `[class*='shepherd']`, `[class*='driver']`) and compare against a wider breakpoint of the same page — a real layout bug won't disappear when you also see the tour's tooltip clearly. If the project's seed data controls onboarding/tutorial-completion state, seed it complete to avoid the contamination outright.
 
 ## Tips
 
