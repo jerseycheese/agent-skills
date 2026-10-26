@@ -26,12 +26,12 @@ This skill handles the full worktree setup workflow with:
 
 ### 1. Dev Server Awareness
 
-Every worktree gets its own dev-server port — never assume port 3000 belongs to the worktree you're in. If the project has adopted the per-worktree port pattern (`scripts/worktree-port.cjs`, installed by `install-worktree-port.sh`), resolve the port before checking it:
+Every worktree gets its own dev-server port — never assume port 3000 belongs to the worktree you're in. Resolve the port before checking it:
 
 ```bash
-# Resolve this checkout's port: the per-worktree script if the project has it
-# installed, else the port recorded in .claude/launch.json, else 3000 (the
-# main-checkout default)
+# Resolve this checkout's port: a project script if it has one
+# (scripts/worktree-port.cjs), else the port recorded in .claude/launch.json,
+# else 3000 (the main-checkout default)
 if [ -f scripts/worktree-port.cjs ]; then
   PORT="$(node scripts/worktree-port.cjs)"
 else
@@ -47,7 +47,13 @@ else
 fi
 ```
 
-If the project has no per-worktree port scripts yet, run `install-worktree-port.sh <project-dir>` (in `shared/Development/tools/dev-server/`) before creating more worktrees — otherwise every worktree's `npm run dev` fights over the same port.
+If the project has no per-worktree port yet, give each new worktree its own before starting a server — otherwise every worktree's `npm run dev` fights over the same port. A manual way: pick a free port per worktree and pass it to the dev server (`PORT=3101 npm run dev`, or the framework's port flag), or derive one from the worktree path:
+
+```bash
+PORT=$((3100 + $(pwd | cksum | cut -d' ' -f1) % 900))
+```
+
+Record the port in `.claude/launch.json` so later sessions resolve the same one.
 
 ### 2. Worktree Creation
 ```bash
@@ -110,7 +116,7 @@ After worktree created:
 #### Before Starting Work
 - [ ] Verify dev server is running
       Resolve this worktree's own port first: `node scripts/worktree-port.cjs`
-      (if installed) or the port in `.claude/launch.json`, then `lsof -ti:$PORT`
+      (if the project has it) or the port in `.claude/launch.json`, then `lsof -ti:$PORT`
       or visit `http://localhost:$PORT`
 
 - [ ] Install dependencies if needed
@@ -206,8 +212,8 @@ When working on multiple issues in parallel, create a worktree per issue:
 git worktree add ../[project]-issue-123 -b issue-123-develop develop
 git worktree add ../[project]-issue-145 -b issue-145-develop develop
 
-# Each worktree's port is derived from its own path — start a dev server in
-# either or both, no coordination needed
+# Give each worktree its own port (see Dev Server Awareness) — then start a
+# dev server in either or both
 ```
 
 ### With `test-fix`
@@ -264,7 +270,7 @@ Creating worktree:
 
 [Creates worktree, copies .env.local from the main checkout]
 
-Worktree created. This worktree's own port: 3247 (derived from its path).
+Worktree created. This worktree's own port: 3247 (derived from its path, as above).
 
 Dev server options:
 (a) Start a dev server for this worktree on port 3247
@@ -291,8 +297,8 @@ Creating worktrees:
 2. ../[project]-issue-145 (issue-145-develop) -> port 3512
 3. ../[project]-issue-167 (issue-167-develop) -> port 3089
 
-Each worktree's port is derived from its own path, so there's no collision
-and no coordination needed — start a dev server in any or all of them.
+Each worktree gets its own port, so there's no collision — start a dev
+server in any or all of them.
 
 All 3 worktrees created.
 
