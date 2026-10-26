@@ -230,7 +230,6 @@ Don't use it for small feature changes, new feature work, or when it's unclear w
 
 - `test-reaper` - trivial, duplicate, and over-mocked tests whose subject still exists
 - `code-health-audit` - broader sweep that defers here for removal mechanics
-- `github-workflow` - clean, focused commits for removals
 
 ## Remember
 

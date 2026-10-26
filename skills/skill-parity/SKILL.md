@@ -12,14 +12,14 @@ Keep skills aligned across Claude Code, Codex, Antigravity, and the shared Agent
 
 ## Canonical source: the agent-skills repo (symlink-based, Claude side)
 
-The single source of truth for hand-authored skills is the public repo `jerseycheese/agent-skills` (cloned at `~/Projects/shared/agent-skills`). It's also registered as a Claude Code plugin marketplace (`jerseycheese-skills` -> plugin `workflow-skills`), but that plugin is deliberately **disabled** on this machine — plugin skills always need a `/plugin-name:skill-name` prefix to invoke (no bare-name resolution, even when unambiguous), and that prefix drifted unpredictably (a shifting git-SHA namespace, since the plugin has no pinned `version`). Bare `/skill-name` invocation only works for standalone skills, so:
+One supported layout: keep a single clone of your skills repo (referred to here as `<repo>`) as the source of truth, and have each provider load skills from it through symlinks. Don't also install the same skills as a Claude Code plugin — it would double-register the same skill names. (Plugin skills also need a `/plugin-name:skill-name` prefix to invoke; standalone skills in `~/.claude/skills/` work as bare `/skill-name`.)
 
-1. Edit a skill once in the repo.
-2. `git push` (keeps the public marketplace listing current for other users/machines).
-3. On this machine, Claude Code loads it via a real symlink at `~/.claude/skills/<name>` -> `~/Projects/shared/agent-skills/skills/<name>` — edits are live immediately, no copy or plugin-update step needed. This is canon now, not a fallback; do not remove these symlinks or re-enable the `workflow-skills` plugin (it would double-register the same skill names).
+1. Edit a skill once in `<repo>`.
+2. `git push` if the repo is shared or published.
+3. Claude Code loads it via a real symlink at `~/.claude/skills/<name>` -> `<repo>/skills/<name>` — edits are live immediately, no copy step needed. Don't remove these symlinks.
 4. Codex and Antigravity hydrate `~/.agents/skills/` from the same repo via the copy/symlink paths below (or the `find-skills` installer).
 
-New skills added to the repo need a matching symlink created in `~/.claude/skills/` (`ln -s ../../Projects/shared/agent-skills/skills/<name> ~/.claude/skills/<name>`) — this doesn't happen automatically. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
+New skills added to the repo need a matching symlink created in `~/.claude/skills/` (`ln -s <repo>/skills/<name> ~/.claude/skills/<name>`) — this doesn't happen automatically. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
 
 ## Research-first rule
 
@@ -72,7 +72,7 @@ Do not mirror to `~/.codex/skills/` — Codex loads both that path and `~/.agent
 - Global, Antigravity CLI-only: `~/.gemini/antigravity-cli/skills/<skill-name>/SKILL.md`
 - Global, Antigravity IDE-only: `~/.gemini/antigravity/skills/<skill-name>/SKILL.md`
 
-Antigravity defaults to `.agents/skills` for workspace skills, and that workspace path is the stable choice across Antigravity 2.0, Antigravity CLI, and Antigravity IDE. Global-path docs vary by surface; prefer `~/.gemini/config/skills` when a global skill must work across Antigravity surfaces, and use the surface-specific paths only when explicitly targeting that surface. Do not create new `~/.gemini/skills` installs on this machine; treat that path as a legacy Gemini CLI/shared fallback and touch it only when pruning an explicitly identified stale mirror.
+Antigravity defaults to `.agents/skills` for workspace skills, and that workspace path is the stable choice across Antigravity 2.0, Antigravity CLI, and Antigravity IDE. Global-path docs vary by surface; prefer `~/.gemini/config/skills` when a global skill must work across Antigravity surfaces, and use the surface-specific paths only when explicitly targeting that surface. Do not create new `~/.gemini/skills` installs; treat that path as a legacy Gemini CLI/shared fallback and touch it only when pruning an explicitly identified stale mirror.
 
 ## File and metadata rules
 
