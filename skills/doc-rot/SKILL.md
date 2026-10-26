@@ -84,7 +84,7 @@ Present judgment calls as a triaged list with `file:line`, what's wrong, and the
 ## Verify and commit
 
 - After edits: re-run the link check; if the project builds its docs, build them; run lint if comments were touched.
-- Focused commits by type, in the user's voice (apply the `voice` skill):
+- Focused commits by type, in the user's writing style (apply their style skill or config if they have one):
   - `docs: fix stale paths and dead links in README`
   - `docs: drop archaeological comments and commented-out code`
   - `docs: correct docstring drift in <module>`

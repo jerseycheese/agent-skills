@@ -190,7 +190,7 @@ body:
   everything else in the body verbatim — checklists, formatting, all of it.
 - **Judgment calls** — jargon rewrites, verbosity trims, and any tone rewrite stay flagged, never
   auto-applied, exactly as `plain-language-audit` treats them everywhere else.
-- **Never apply the `voice` skill's rewrite here**, even for judgment calls someone approves later.
+- **Never apply the user's writing-style rewrite here**, even for judgment calls someone approves later.
   Issue title/body is frequently someone else's authored report, not the maintainer's own prose —
   a deliberately tighter restraint than `plain-language-audit`'s default for repo docs.
 

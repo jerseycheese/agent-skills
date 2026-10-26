@@ -14,7 +14,7 @@ It's prose and tone only. For code correctness or structure problems (fake fallb
 
 This is the prose counterpart to `doc-rot` (which fixes docs that are *wrong*) and `code-health-audit` (which fixes code that's *overengineered*) — this one fixes text that's *hard to read*, whether or not it's accurate.
 
-**Developer-facing text** (comments, docstrings, internal docs, PR/issue prose) gets the full treatment: plain language, AI-tell removal, tightening, and — where genuinely a rewrite rather than a mechanical swap — the user's own voice (apply the `voice` skill, canon at `~/.agents/voice.local.md`).
+**Developer-facing text** (comments, docstrings, internal docs, PR/issue prose) gets the full treatment: plain language, AI-tell removal, tightening, and — where genuinely a rewrite rather than a mechanical swap — the user's own writing style (apply their style skill or config if they have one).
 
 **User-facing UI copy** (button labels, error messages, empty states, in-app strings) gets plain language, AI-tell removal, and tightening only — never the developer-voice rewrite. It's a different audience with its own conventions (see the `design:ux-copy` skill if one's installed); don't impose "sounds like Jack" on a "Forgot password?" link. UI copy findings always go in the judgment-call bucket below, never auto-fixed.
 
@@ -56,14 +56,14 @@ grep -rniE "${EXCLUDES[@]}" "(it is important to note that|in today's fast-paced
 ```
 
 Canon, in priority order:
-1. `~/.agents/voice.local.md`'s living "AI smell" list, if the file exists — read it, don't copy its private contents into this shared skill file.
-2. This skill's own built-in list above, seeded from current (2026) AI-tell trackers, for projects/users without that file.
+1. The project's or user's own style guide or "AI smell" list, if one exists — read it, don't copy its contents into this shared skill file.
+2. This skill's own built-in list above, seeded from current (2026) AI-tell trackers, for projects/users without one.
 
-**Stay current:** do one `WebSearch` per run for recent AI-tell discussion (the trackers that seeded the list above are themselves living pages, worth a re-check) rather than trusting a frozen list indefinitely. If it surfaces a pattern not already on file, propose appending it to `voice.local.md`'s living list — ask before editing that file, it's personal and outside this repo.
+**Stay current:** do one `WebSearch` per run for recent AI-tell discussion (the trackers that seeded the list above are themselves living pages, worth a re-check) rather than trusting a frozen list indefinitely. If it surfaces a pattern not already on file, propose appending it to the user's own list if they keep one — ask before editing it, it's outside this repo.
 
 ### 3. Verbosity
 
-Semantic read pass — no reliable grep for "says less in more words." Measure against `voice.local.md`'s "Length & Density" budgets where the file's available (it gives per-artifact word/paragraph targets); otherwise look for redundant qualifier stacking, filler ("in order to," "it's important to note that," "due to the fact that"), and sentences that could lose a third of their words without losing meaning.
+Semantic read pass — no reliable grep for "says less in more words." Measure against the project's or user's length guidance where it exists (per-artifact word/paragraph targets); otherwise look for redundant qualifier stacking, filler ("in order to," "it's important to note that," "due to the fact that"), and sentences that could lose a third of their words without losing meaning.
 
 ## Categorize and act
 
@@ -81,7 +81,7 @@ Present judgment calls as a triaged list — `file:line`, what's wrong, proposed
 
 ## Verify and commit
 
-Re-run the grep checks after edits to confirm the flagged patterns are actually gone. If the project lints prose (Vale, markdownlint) or comments (eslint jsdoc rules, etc.), run it. Focused commits by category, in the user's voice (apply the `voice` skill):
+Re-run the grep checks after edits to confirm the flagged patterns are actually gone. If the project lints prose (Vale, markdownlint) or comments (eslint jsdoc rules, etc.), run it. Focused commits by category, in the user's writing style (apply their style skill or config if they have one):
 - `docs: cut AI-tell phrasing and filler from README`
 - `docs: plain-language pass on <module> docstrings`
 

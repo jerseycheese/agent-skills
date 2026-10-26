@@ -164,7 +164,7 @@ Steps 2 and 3 are not optional. Everything else in this skill is a heuristic; th
 
 ## Commit and ship
 
-Focused commits, in the user's voice (apply the `voice` skill):
+Focused commits, in the user's writing style (apply their style skill or config if they have one):
 
 - `Collapse six identically-named cases in mockStoreFactories`
 - `Delete render checks that duplicate the case above them`

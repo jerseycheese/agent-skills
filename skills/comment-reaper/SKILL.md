@@ -95,7 +95,7 @@ Present these as a single triaged list with `file:line`, the current text, and t
 
 ## Commit and ship
 
-Focused commits, in the user's voice (apply the `voice` skill):
+Focused commits, in the user's writing style (apply their style skill or config if they have one):
 
 - `Strip issue-number citations from comments - git blame already has them`
 - `Drop comments that restate the line below them`

@@ -124,6 +124,8 @@ def main():
             for n, line in enumerate(text.split("\n"), 1):
                 if "/Users/" in line:
                     fail(name, f"absolute /Users/ path at {f.relative_to(ROOT)}:{n}")
+                if ".local.md" in line:
+                    fail(name, f"private .local.md reference at {f.relative_to(ROOT)}:{n}")
 
     for stale in sorted(listed - {f"skills/{n}" for n in names}):
         fail(stale, "listed in marketplace.json but isn't a skills/ folder")
