@@ -17,7 +17,27 @@ Invoke this skill automatically whenever:
 
 Do NOT wait for the user to ask. Run as part of the normal post-edit flow for any styling change.
 
-The trigger depends on this description matching. To make it deterministic, you can add your own `PostToolUse` hook in `settings.json` that matches `Edit|Write|MultiEdit` on styling files and injects a reminder to run this skill; this repo does not ship one. Effort gating: at `high`/`xhigh`/`max` run the full audit against the token inventory and showcase (Steps 1+); at lower effort a quick spot-check of the diff's hardcoded values is enough.
+The trigger depends on this description matching. To make it deterministic, you can add your own `PostToolUse` hook in `settings.json` that matches `Edit|Write|MultiEdit` and prints a reminder to run this skill; this repo does not ship one. Minimal example:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'If this edit touched styling (.css, className, style=), run the ds-guard skill.'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Effort gating: at `high`/`xhigh`/`max` run the full audit against the token inventory and showcase (Steps 1+); at lower effort a quick spot-check of the diff's hardcoded values is enough.
 
 # DS Guard — Design System Enforcement
 
