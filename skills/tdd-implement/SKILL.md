@@ -88,7 +88,7 @@ With passing tests as a safety net, clean up:
 - Replace any placeholder implementations with proper code
 - Extract reusable patterns if the same logic appears in multiple places
 - Remove anything that was scaffolding, not production code
-- Ensure naming is consistent with the rest of the codebase
+- Match the codebase's naming
 
 Run tests after every non-trivial refactor to confirm they're still green.
 

@@ -154,7 +154,7 @@ If any attempt succeeds (test passes):
 1. Report success
 2. Explain what the issue was
 3. Explain what fixed it
-4. Suggest running the full test suite to ensure no regressions
+4. Suggest running the full test suite to check for regressions
 
 ## Multiple Failing Tests
 
@@ -180,5 +180,5 @@ If multiple tests are failing:
 
 - This skill is based on the user's experience with 10+ iteration spirals on E2E tests
 - The 3-attempt limit forces acknowledgment when the approach isn't working
-- Presenting options empowers the user to make strategic decisions
+- Presenting options lets the user pick the next step
 - Skipping a test is a valid outcome - it's better than wasting hours

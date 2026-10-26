@@ -79,7 +79,7 @@ Out of scope:
 [Concrete approach that leans on existing patterns. Reference specific files or components
 found during discovery. Explain key decisions — why this approach over alternatives.]
 
-## Existing code to leverage
+## Existing code to reuse
 - [file/component]: [how it applies]
 - [utility]: [what it provides]
 - [type/interface]: [what to extend]

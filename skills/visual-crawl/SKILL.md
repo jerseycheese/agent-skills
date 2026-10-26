@@ -537,7 +537,7 @@ Every invocation MUST differ from the last. Specifically:
 - At least one interaction test uses a randomly selected element
 - The Wildcard breakpoint uses truly random dimensions each time
 
-This ensures cumulative coverage — run it 5 times and you've thoroughly audited the whole app across many viewport combinations.
+Run it 5 times and the whole app gets covered across many viewport combinations.
 
 ## Gotchas Learned From Testing
 

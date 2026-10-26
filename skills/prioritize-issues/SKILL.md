@@ -143,9 +143,9 @@ For each of the top 3 candidates:
 - What IS included
 - What is NOT included (be explicit about adjacent work that's out of scope)
 
-**Technical approach** — Brief approach that leverages existing patterns in the codebase. Check what's already there before assuming new code is needed.
+**Technical approach** — Brief approach that reuses existing patterns in the codebase. Check what's already there before assuming new code is needed.
 
-**Existing code to leverage** — List specific components, utilities, or patterns that apply.
+**Existing code to reuse** — List specific components, utilities, or patterns that apply.
 
 **Implementation plan** — 3-5 concrete steps.
 
@@ -211,7 +211,7 @@ Out: [list]
 **Approach**
 [Brief technical approach]
 
-**Existing code to leverage**
+**Existing code to reuse**
 [List]
 
 **Implementation plan**

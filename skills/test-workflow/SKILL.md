@@ -321,7 +321,7 @@ All tests passing! Ready to:
 ### 💡 Insights
 
 Based on this run:
-- Unit tests are fast and comprehensive ✅
+- Unit tests are fast and thorough
 - One E2E test needed fixing (race condition with API)
 - Visual regression caught no UI breaks ✅
 - Consider adding E2E test for error states (gap in coverage)
@@ -359,7 +359,7 @@ npm run type-check                 # TypeScript
 ### When to Run Unit Tests
 - Changed any `.ts`, `.tsx`, `.js`, `.jsx` files
 - Modified utilities, hooks, components
-- Always run (fast, comprehensive)
+- Always run (fast, thorough)
 
 ### When to Run E2E Tests
 - Changed user-facing components
