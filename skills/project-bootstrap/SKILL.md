@@ -19,7 +19,8 @@ All scaffolding lives at `~/Projects/shared/Development/templates/starter-kit/`.
 
 - `core/` - stamped into every project, any stack:
   - `CLAUDE.md.template`, `README.md.template` - filled with judgment from recon
-  - `.editorconfig`, `.gitignore` - copied verbatim
+  - `.editorconfig` - copied verbatim
+  - `gitignore` (or `.gitignore` in older kit checkouts) - copied to `.gitignore` in the project. The kit stores it without the dot so it isn't a live ignore inside the kit's own repo.
   - `.claude/settings.json` - copied verbatim (committed canon: minimal safe permissions)
   - `.claude/settings.local.json.template` - copied to `settings.local.json`, adjusted to stack; only if absent
   - `.claude/launch.json.template` - filled with dev command + port
@@ -45,7 +46,7 @@ Ask only for what can't be discovered: the project's name and one-line purpose i
 
 3. **Stamp the core** from `starter-kit/core/`:
    - Copy verbatim: `.editorconfig`, `.claude/settings.json`, `scripts/worktree-port.cjs`.
-   - `.gitignore`: copy if the repo has none; if it already has one, ensure the kit's `.claude` commit-canon block is present.
+   - `.gitignore`: the kit file is `gitignore` (fall back to `.gitignore` if the kit still has the dotted name). Copy it to `.gitignore` if the repo has none; if it already has one, ensure the kit's `.claude` commit-canon block is present.
    - **Write CLAUDE.md** by filling `CLAUDE.md.template`: every section gets exact commands and literal ports/paths, written for a weaker model - imperative, do-X-then-verify-Y, minimal cleverness required of the reader. Target 100-250 lines. No emojis. (Never overwrite an existing CLAUDE.md - diff instead.)
    - **Write `README.md`** from `README.md.template` only if the repo has none.
    - **Write `.claude/launch.json`** from `launch.json.template` with the chosen dev command and port.
