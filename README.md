@@ -1,6 +1,6 @@
 # agent-skills
 
-A collection of agent skills usable across Claude Code, Codex, Gemini CLI, and any tool that reads a shared `.agents/skills` directory. Each skill lives in its own directory under `skills/`, with a single `SKILL.md` whose frontmatter tells the agent when to invoke it and what to do.
+A collection of agent skills usable across Claude Code, Codex, Antigravity, and any tool that reads a shared `.agents/skills` directory. Each skill lives in its own directory under `skills/`, with a single `SKILL.md` whose frontmatter tells the agent when to invoke it and what to do.
 
 ## Skills
 
@@ -53,7 +53,7 @@ Grouped by type. Each links to its `SKILL.md`.
 - **[project-bootstrap](skills/project-bootstrap/SKILL.md)** — Stamp a new repo's agent scaffolding: a CLAUDE.md from the house template, starter settings, and a launch.json with a free port.
 - **[worktree-enhanced](skills/worktree-enhanced/SKILL.md)** — Set up a git worktree with branch, dev-server detection, and project-specific setup.
 - **[ci-fix-with-memory](skills/ci-fix-with-memory/SKILL.md)** — Auto-invoke when CI is red. Reads handoffs and a known-issues log so the same fix isn't tried twice.
-- **[skill-parity](skills/skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Gemini CLI, and shared `.agents/skills` paths.
+- **[skill-parity](skills/skill-parity/SKILL.md)** — Keep skills in sync across Claude Code, Codex, Antigravity, and shared `.agents/skills` paths.
 
 ### Session & communication
 
@@ -84,9 +84,9 @@ Each agent looks for skills in a specific directory. Copy or symlink the skill f
 | --- | --- | --- |
 | Claude Code | `~/.claude/skills/<skill-name>/` | `.claude/skills/<skill-name>/` |
 | Codex | `~/.agents/skills/<skill-name>/` | `.agents/skills/<skill-name>/` |
-| Gemini CLI | `~/.gemini/skills/<skill-name>/` or `~/.agents/skills/<skill-name>/` | `.gemini/skills/<skill-name>/` or `.agents/skills/<skill-name>/` |
+| Antigravity | `~/.agents/skills/<skill-name>/` | `.agents/skills/<skill-name>/` |
 
-The `.agents/skills` path is the interoperable spot — Codex and Gemini both read from it, so it's the path to pick if you want one copy to cover both.
+The `.agents/skills` path is the interoperable spot — Codex and Antigravity both read from it, so it's the path to pick if you want one copy to cover both.
 
 Quick install for a single skill in Claude Code:
 
@@ -111,8 +111,8 @@ claude plugin marketplace add jerseycheese/agent-skills
 claude plugin install workflow-skills@jerseycheese-skills
 ```
 
-After that, `claude plugin marketplace update` (or a restart) picks up new commits. Codex and Gemini still use the copy/symlink paths above; this repo stays the single source for all of them.
+After that, `claude plugin marketplace update` (or a restart) picks up new commits. Codex and Antigravity still use the copy/symlink paths above; this repo stays the single source for all of them.
 
 Installed skills are namespaced as `workflow-skills:<name>`. They're model-invoked — Claude runs them automatically when your request matches the skill's description, so they won't show up in the `/` slash-command menu. Browse them with `/skills`, or just describe the task (e.g. "prioritize my issues").
 
-After installing, restart the agent (or run `/skills reload` in Gemini) so the new skill is picked up.
+After installing, restart the agent (or reload skills from Antigravity's skill inventory) so the new skill is picked up.
