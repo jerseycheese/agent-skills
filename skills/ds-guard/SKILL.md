@@ -17,7 +17,7 @@ Invoke this skill automatically whenever:
 
 Do NOT wait for the user to ask. Run as part of the normal post-edit flow for any styling change.
 
-The trigger depends on this description matching. To make it deterministic, you can add your own `PostToolUse` hook in `settings.json` that matches `Edit|Write|MultiEdit` and prints a reminder to run this skill; this repo does not ship one. Minimal example:
+The trigger depends on this description matching. To make the reminder deterministic, you can add your own `PostToolUse` hook in `settings.json`; this repo does not ship one. The hook has to print JSON with `hookSpecificOutput.additionalContext`: plain text on stdout only shows in the transcript view and never reaches the model. It fires after every `Edit`, `Write`, or `MultiEdit`, not just styling edits, so the reminder still leaves it to the model to decide whether the edit touched styling. Minimal example:
 
 ```json
 {
@@ -28,7 +28,7 @@ The trigger depends on this description matching. To make it deterministic, you 
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'If this edit touched styling (.css, className, style=), run the ds-guard skill.'"
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PostToolUse\", \"additionalContext\": \"If this edit touched styling (.css, className, style=), run the ds-guard skill.\"}}'"
           }
         ]
       }
