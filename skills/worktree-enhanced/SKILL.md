@@ -124,8 +124,8 @@ After worktree created:
 
 - [ ] Confirm ignored local env files are present
       Copy `.env.local` / `.env.*.local` from the main checkout if missing;
-      never commit them. For Narraitor, `GEMINI_API_KEY` must be available
-      server-side before testing real generation.
+      never commit them. Make sure any API keys the project needs server-side
+      are available before testing anything that calls a real service.
 
 - [ ] Run tests to establish baseline
       `npm test` to verify clean state

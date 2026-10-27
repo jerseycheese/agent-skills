@@ -58,8 +58,8 @@ before it can group anything. Two mechanisms exist and repos use one or the othe
   nothing. If the repo does have them, that is the typing mechanism: fetch the type per issue in
   the §2 bulk call.
 - **A type label convention** — `epic`, `bug`, `enhancement`, `user-story`, `documentation`, and
-  so on. The convention doc from §4b usually names these outright (Narraitor's `.github/labels.md`
-  has a `## Type Labels` section listing exactly six). Use that list as the type mapping rather
+  so on. The convention doc from §4b usually names these outright (a repo's `.github/labels.md`
+  might have a `## Type Labels` section listing exactly six). Use that list as the type mapping rather
   than inventing one from whatever labels happen to look type-ish.
 
 Don't guess the JSON field name for native types — it arrived in `gh` 2.94.0 and older versions
@@ -94,7 +94,7 @@ on an issue nobody touched since last week is pure waste. Build the deep-dive se
   guarantees its successor re-deep-dives all 15 for no reason. The prior tracking issue lists what
   it wrote (see §8); subtract that set. Only skip the subtraction if the issue changed again
   *after* the prior run finished — compare against the write, not just the run.
-  A live example of the cost: a Narraitor run saw 23 issues past the cursor and only 10 had
+  A live example of the cost: one run saw 23 issues past the cursor and only 10 had
   genuinely changed; the other 13 were the previous run's own label writes.
 - Plus a small random sample (~5) of the issues with the *oldest* `updatedAt` among everything not
   already selected — a drift-catcher. Pure incremental selection would never revisit an issue that
@@ -221,7 +221,7 @@ regardless of score when the issue shows an explicit deferral signal (body/title
   the issue has it** → **don't compare it against the computed tier at all.**
   Post-mvp is an intentional roadmap-sequencing override, not a score bucket — flagging every
   post-mvp issue whose formula score happens to land in a higher tercile is noise, not signal (a
-  first live run on Narraitor's 93-issue backlog flagged 51 mismatches this way, only ~4 of which
+  first live run on a 93-issue backlog flagged 51 mismatches this way, only ~4 of which
   were real). Instead, flag a post-mvp issue only when its own title or body text directly
   contradicts the deferral — an explicit severity/priority claim ("High priority", "critical") or
   MVP-scope language ("MVP approach", "(MVP)") sitting on an issue labeled post-mvp. That's a
