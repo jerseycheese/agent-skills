@@ -1,7 +1,7 @@
 ---
 name: project-bootstrap
 description: >
-  Stamps a project under ~/Projects with the standard agent scaffolding from the starter kit: a
+  Stamps a project under your projects folder with the standard agent scaffolding from the starter kit: a
   house-template CLAUDE.md, core config, an optional stack layer, and a row in the root map. Use
   for a new repo or one missing its CLAUDE.md. Trigger on: "bootstrap this project", "new project
   setup", "stamp a CLAUDE.md", "set up agent scaffolding".
@@ -15,7 +15,13 @@ Every repo should hand an agent the same things up front: what it is, how to run
 
 ## The starter kit (single source of truth)
 
-All scaffolding lives at `~/Projects/shared/Development/templates/starter-kit/`. Never re-author these files inline - copy them from the kit and fill the placeholders.
+This skill needs a starter kit directory: a folder of template files you maintain. It does not ship one. Resolve the kit path in this order:
+
+1. The `STARTER_KIT` environment variable, if set.
+2. `~/Projects/shared/Development/templates/starter-kit/`, if it exists.
+3. Otherwise stop and tell the user the skill has no kit to copy from. Do not write the scaffolding inline.
+
+The layout below is what the skill expects the kit to contain. Copy files from the kit and fill the placeholders.
 
 - `core/` - stamped into every project, any stack:
   - `CLAUDE.md.template`, `README.md.template` - filled with judgment from recon
@@ -42,7 +48,7 @@ Ask only for what can't be discovered: the project's name and one-line purpose i
    - `git log --oneline -15` - recent themes become "Common tasks" candidates
    - `git worktree list` - decides whether the worktrees section applies
 
-2. **Pick a port** (web projects only): read the Active projects table in `~/Projects/CLAUDE.md` and pick one nothing else claims. Already taken: 3000 (narraitor, rcv-simulator-va main), 3101, 4173, 4174, 5173, 6006.
+2. **Pick a port** (web projects only): read the Active projects table in the projects map (see step 5) and pick one nothing else claims. If there is no map, check `.claude/launch.json` and the dev-server config of sibling projects, and avoid common defaults (3000, 5173, 6006).
 
 3. **Stamp the core** from `starter-kit/core/`:
    - Copy verbatim: `.editorconfig`, `.claude/settings.json`, `scripts/worktree-port.cjs`.
@@ -54,7 +60,7 @@ Ask only for what can't be discovered: the project's name and one-line purpose i
 
 4. **Apply a stack layer** (only if one matches the project): for a React + Vite frontend, follow `layers/frontend-vite/README.md` - scaffold the baseline with the official tools, then overlay the layer's files. Skip this step if the project's stack has no layer yet.
 
-5. **Register it**: append a row to the Active projects table in `~/Projects/CLAUDE.md` (project path, stack, canonical ports).
+5. **Register it**: the projects map is `$PROJECTS_MAP` if set, else `~/Projects/CLAUDE.md`. If that file exists, append a row to its Active projects table (project path, stack, canonical ports). If it doesn't, skip this step and say so.
 
 6. **Smoke-test the doc**: following ONLY the new CLAUDE.md, start the dev server, hit its verify step, run the test command, then stop anything started. If a step doesn't work as written, fix the doc - not the expectations.
 
