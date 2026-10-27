@@ -1,8 +1,8 @@
 ---
 name: github-screenshot
 description: >
-  Generates GitHub-ready image markdown for screenshots using raw.githubusercontent.com URLs via
-  generate-github-image-markdown.sh. Use whenever a PR, issue, or doc needs an image. Trigger on:
+  Generates GitHub-ready image markdown for screenshots using raw.githubusercontent.com URLs built from the
+  git remote, branch, and file path. Use whenever a PR, issue, or doc needs an image. Trigger on:
   "add a screenshot to this PR", "embed image in issue", "attach screenshot", "add screenshot to
   docs".
 ---
@@ -17,10 +17,6 @@ Use this skill when:
 - Documenting features with screenshots
 - Creating visual documentation in markdown
 
-## Setup
-
-This skill wraps a local `generate-github-image-markdown.sh` script. Update the path below to match your own installation before using.
-
 ## Directory convention
 
 When the image is being committed purely so it can render in an issue/PR body (not an existing app asset the user is pointing you at), commit it under a top-level `github-screenshots/<topic-or-issue>/` directory — e.g. `github-screenshots/hover-text-invisible/before-hover.png`. The name says what these files are for: throwaway evidence for a GitHub body, not app screenshots or fixtures, so they're easy to find and prune later without touching anything else in the repo. Don't reuse a generic `screenshots/` dir for this — that name doesn't self-document, and it collides with whatever ad-hoc convention a given repo might already have for actual app screenshots.
@@ -29,11 +25,12 @@ If the target repo already has an established convention for this (check with th
 
 ## What This Skill Does
 
-Runs your `generate-github-image-markdown.sh` script to:
-- Generate proper raw.githubusercontent.com URLs
-- Create markdown with alt text and captions
-- Handle git repository detection automatically
-- Include helpful comments with local paths
+Builds the markdown for an image so it renders in a GitHub body:
+- A `raw.githubusercontent.com` URL from the repo's remote, branch, and file path
+- Alt text and an optional italic caption
+- A fallback to a relative path when there is no GitHub remote
+
+No external script is needed; the steps below use plain `git`.
 
 ## Usage Flow
 
@@ -44,20 +41,23 @@ Ask the user for:
 2. **Alt text** (optional) - defaults to "Screenshot"
 3. **Caption** (optional) - italicized description below image
 
-### Step 2: Run the Script
+### Step 2: Build the URL
 
-Execute:
+The image must already be committed and pushed to the branch the URL names, or GitHub will show a broken image.
+
 ```bash
-~/tools/screenshots/generate-github-image-markdown.sh \
-  "$IMAGE_PATH" \
-  "$ALT_TEXT" \
-  "$CAPTION"
+REMOTE=$(git remote get-url origin)     # git@github.com:owner/repo.git or https://github.com/owner/repo.git
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REPO_PATH=$(git ls-files --full-name -- "$IMAGE_PATH")   # path relative to the repo root
 ```
 
-**Permission pattern needed** (update path to match your setup):
+Turn `REMOTE` into `owner/repo` (strip the host prefix and a trailing `.git`), then assemble:
+
 ```
-Bash(~/tools/screenshots/generate-github-image-markdown.sh:*)
+https://raw.githubusercontent.com/<owner>/<repo>/<BRANCH>/<REPO_PATH>
 ```
+
+If `git ls-files` prints nothing, the image isn't tracked yet. Say so and ask whether to commit it first (see the directory convention above). If the remote isn't on github.com, use the relative path and warn, as under Error Handling.
 
 ### Step 3: Present the Result
 
@@ -112,7 +112,7 @@ Optional caption? (press enter to skip)
 
 **User:** `Shows the original dashboard layout`
 
-**Claude:** *Runs script and presents result*
+**Claude:** *Builds the URL and presents result*
 ```markdown
 ## Generated Screenshot Markdown
 
@@ -137,7 +137,7 @@ Please check the path and try again.
 ```
 
 ### Not in Git Repository
-If script can't detect git repo:
+If the git remote or repo root can't be found:
 ```
 ⚠️ Warning: Couldn't generate GitHub URL (not in a git repository)
 
@@ -145,15 +145,6 @@ Generated markdown with relative path instead:
 ![Alt Text](./github-screenshots/image.png)
 
 Note: This may not display correctly in GitHub
-```
-
-### Script Not Found
-If the script is missing:
-```
-❌ Error: Screenshot script not found at expected location.
-
-Please verify the script exists at the path configured in this skill,
-or update the path in Step 2 to match your installation.
 ```
 
 ## Common Use Cases
@@ -178,11 +169,9 @@ Claude: [runs skill, presents markdown, doesn't insert anywhere]
 
 ## Integration with Your Workflow
 
-This skill encodes the full screenshot workflow — you just invoke it instead of remembering the script path, argument order, and permission pattern every time.
+This skill encodes the full screenshot workflow, so you don't have to remember the URL format or the directory convention.
 
 ## Notes
 
-- This skill wraps a local script
-- The script handles all the git complexity (remote detection, branch detection, path conversion)
-- Permission pattern is encoded in the skill, so you don't need to remember it
-- Works in any git repository, automatically detects repo details
+- The URL pattern depends only on the git remote, branch, and tracked path
+- Works in any git repository with a GitHub `origin`
