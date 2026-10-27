@@ -37,6 +37,10 @@ Analyzes your changes and intelligently runs the appropriate test suite(s):
 
 ## Usage Flow
 
+### Phase 0: Read the project's scripts
+
+Before running anything, list the scripts the project defines (`scripts` in `package.json`, or the repo's equivalent such as a Makefile or `pyproject.toml`). Map each phase below (type check, CSS lint, unit, E2E, visual) to the script that does that job. Script names differ between projects, so every command in this skill is an example. If a phase has no matching script, skip it and say so in the report. Never run a script name you haven't confirmed exists.
+
 ### Phase 1: Analyze Changes
 
 Detect what changed:
@@ -99,6 +103,8 @@ You've changed:
 6. Full test suite (confidence check)
 
 ### Execution Plan
+
+Script names below are examples. Substitute the project's own from Phase 0.
 
 ```bash
 # Phase 1: Quick validation (< 1 minute)
@@ -329,7 +335,7 @@ Based on this run:
 
 ## Test Suite Reference
 
-From your project:
+Example script names. Replace them with the ones Phase 0 found in your project; skip any suite the project doesn't have:
 
 ### Unit Tests
 ```bash
