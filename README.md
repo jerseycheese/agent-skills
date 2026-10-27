@@ -14,6 +14,7 @@ Grouped by type. Each links to its `SKILL.md`.
 - **[ship-issue](skills/ship-issue/SKILL.md)** — Drive one issue from cold start to merged PR: sync, analyze, minimal fix with a test, PR, CI green, post-merge cleanup, wrap-up.
 - **[backlog-routing](skills/backlog-routing/SKILL.md)** — Work a milestone with many agents at once: intake findings into issues, shape the milestone, split it into collision-free batches, route each through `route` to the cheapest capable seat (Claude, Codex, Gemini) in cloud or local, review with a second model family (the repo's automated reviewer counts), and merge only as the repo's adapter allows. The default is human-only, with a review queue for the human. Needs a small per-repo adapter skill. Ships a read-only run dashboard (`dashboard/index.html`, `?demo=1` for a sample).
 - **[route](skills/route/SKILL.md)** — Recommend which provider and model to run a task on, from your own routing table plus current subscription burn. Recommends only; logs overrides. Ships a starter `ai-routing.example.md`.
+- **[update-routing](skills/update-routing/SKILL.md)** — Refresh the model roster in the routing table `route` reads when new models ship. Compares models within each provider only, and sources and dates every number.
 - **[post-merge](skills/post-merge/SKILL.md)** — After a PR merges: close out linked issues, then recommend the single best next thing to work on.
 
 ### Code review & quality

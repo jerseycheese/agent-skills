@@ -40,6 +40,8 @@ wrap-it-up	wrap it up, end of chat
 wrap-it-up	close out this conversation
 route	which model should I use for this
 route	should I switch providers
+update-routing	new models are out, update the routing table
+update-routing	refresh the model list route uses
 backlog-routing	plan the milestone and dispatch batches to agents
 backlog-routing	file issues from my playtest notes
 project-pulse	what is going on across all my projects

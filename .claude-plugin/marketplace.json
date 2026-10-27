@@ -50,6 +50,7 @@
         "./skills/test-fix",
         "./skills/test-reaper",
         "./skills/test-workflow",
+        "./skills/update-routing",
         "./skills/visual-crawl",
         "./skills/visual-qa-pipeline",
         "./skills/worktree-enhanced",
