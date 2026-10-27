@@ -46,7 +46,7 @@ Grouped by type. Each links to its `SKILL.md`.
 - **[visual-crawl](skills/visual-crawl/SKILL.md)** — Crawl the running app at random breakpoints, screenshot regressions, check token consistency.
 - **[visual-qa-pipeline](skills/visual-qa-pipeline/SKILL.md)** — Take a visual crawl all the way to shipped work: triage findings, file Major+ as GitHub issues with screenshots, batch the small stuff, and open fix PRs for mechanical token violations. Schedulable.
 - **[browser-debugger-cli](skills/browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
-- **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub-compatible image markdown via `raw.githubusercontent.com` URLs.
+- **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub image markdown that renders in private repos (SHA-pinned github.com `?raw=true` links).
 
 ### Dev environment, CI & setup
 

@@ -1,8 +1,8 @@
 ---
 name: github-screenshot
 description: >
-  Generates GitHub-ready image markdown for screenshots using raw.githubusercontent.com URLs built from the
-  git remote, branch, and file path. Use whenever a PR, issue, or doc needs an image. Trigger on:
+  Generates GitHub-ready image markdown for screenshots: a github.com ?raw=true link pinned to the
+  commit, which renders in private repos too. Use whenever a PR, issue, or doc needs an image. Trigger on:
   "add a screenshot to this PR", "embed image in issue", "attach screenshot", "add screenshot to
   docs".
 ---
@@ -26,7 +26,7 @@ If the target repo already has an established convention for this (check with th
 ## What This Skill Does
 
 Builds the markdown for an image so it renders in a GitHub body:
-- A `raw.githubusercontent.com` URL from the repo's remote, branch, and file path
+- A `github.com/<owner>/<repo>/blob/<sha>/<path>?raw=true` URL from the repo's remote, the commit, and the file path
 - Alt text and an optional italic caption
 - A fallback to a relative path when there is no GitHub remote
 
@@ -43,19 +43,21 @@ Ask the user for:
 
 ### Step 2: Build the URL
 
-The image must already be committed and pushed to the branch the URL names, or GitHub will show a broken image.
+The image must already be committed and pushed, or GitHub will show a broken image.
 
 ```bash
 REMOTE=$(git remote get-url origin)     # git@github.com:owner/repo.git or https://github.com/owner/repo.git
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+SHA=$(git rev-parse HEAD)
 REPO_PATH=$(git ls-files --full-name -- "$IMAGE_PATH")   # path relative to the repo root
 ```
 
 Turn `REMOTE` into `owner/repo` (strip the host prefix and a trailing `.git`), then assemble:
 
 ```
-https://raw.githubusercontent.com/<owner>/<repo>/<BRANCH>/<REPO_PATH>
+https://github.com/<owner>/<repo>/blob/<SHA>/<REPO_PATH>?raw=true
 ```
+
+Never use `raw.githubusercontent.com`: it doesn't get the viewer's github.com sign-in, so it 404s in a private repo. Pin to the commit SHA, not the branch, since the branch is deleted on merge.
 
 If `git ls-files` prints nothing, the image isn't tracked yet. Say so and ask whether to commit it first (see the directory convention above). If the remote isn't on github.com, use the relative path and warn, as under Error Handling.
 
@@ -67,11 +69,11 @@ Show the generated markdown to the user:
 ## Generated Screenshot Markdown
 
 ```markdown
-![Alt Text](https://raw.githubusercontent.com/user/repo/branch/path/image.png)
+![Alt Text](https://github.com/user/repo/blob/<sha>/path/image.png?raw=true)
 
 *Caption text*
 
-<!-- GitHub URL: https://raw.githubusercontent.com/... -->
+<!-- GitHub URL: https://github.com/user/repo/blob/<sha>/... -->
 <!-- Local path: ./github-screenshots/image.png -->
 ```
 ```
@@ -116,11 +118,11 @@ Optional caption? (press enter to skip)
 ```markdown
 ## Generated Screenshot Markdown
 
-![Dashboard before refactor](https://raw.githubusercontent.com/user/repo/main/github-screenshots/dashboard-before.png)
+![Dashboard before refactor](https://github.com/user/repo/blob/<sha>/github-screenshots/dashboard-before.png?raw=true)
 
 *Shows the original dashboard layout*
 
-<!-- GitHub URL: https://raw.githubusercontent.com/user/repo/main/github-screenshots/dashboard-before.png -->
+<!-- GitHub URL: https://github.com/user/repo/blob/<sha>/github-screenshots/dashboard-before.png?raw=true -->
 <!-- Local path: ./github-screenshots/dashboard-before.png -->
 
 Would you like me to insert this somewhere?
@@ -173,5 +175,5 @@ This skill encodes the full screenshot workflow, so you don't have to remember t
 
 ## Notes
 
-- The URL pattern depends only on the git remote, branch, and tracked path
+- The URL pattern depends only on the git remote, the commit, and the tracked path
 - Works in any git repository with a GitHub `origin`

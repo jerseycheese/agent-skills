@@ -17,7 +17,7 @@ It does **not** reinvent screenshotting. The crawl mechanics — `bdg` setup, ra
 
 - Everything `visual-crawl` needs (`bdg` installed, dev server running, route list).
 - `gh` authenticated for the target repo.
-- For the screenshot-markdown step: the `github-screenshot` skill / `generate-github-image-markdown.sh` helper (it produces `raw.githubusercontent.com` URLs that render in issues and PRs).
+- For the screenshot-markdown step: the `github-screenshot` skill / `generate-github-image-markdown.sh` helper (it produces SHA-pinned github.com `?raw=true` URLs that render in issues and PRs, private repos included).
 
 ## Phase 1 — Crawl
 
@@ -42,11 +42,11 @@ If a run turns up zero Major+ findings, skip Phases 3-4 and just post the roll-u
 
 For each Major+ finding, create an issue. Reuse the `gh issue create` pattern and pick from **existing** labels (`gh label list`) — never invent new ones.
 
-Commit the evidence screenshot to `github-screenshots/<topic>/` before generating its URL (see the `github-screenshot` skill's directory convention) — a `raw.githubusercontent.com` link only resolves once the file exists on a pushed branch. If the finding isn't tied to a fix branch (e.g. it's going straight into a roll-up issue with no PR), push it on its own small branch rather than reusing an unrelated one.
+Commit the evidence screenshot to `github-screenshots/<topic>/` before generating its URL (see the `github-screenshot` skill's directory convention) — the link only resolves once the commit holding the file is pushed. If the finding isn't tied to a fix branch (e.g. it's going straight into a roll-up issue with no PR), push it on its own small branch rather than reusing an unrelated one.
 
 ```bash
 # Get a renderable screenshot URL (see the github-screenshot skill)
-# generate-github-image-markdown.sh writes markdown pointing at raw.githubusercontent.com
+# generate-github-image-markdown.sh writes a SHA-pinned github.com ?raw=true link
 gh issue create \
   --title "Visual: <page> @ <breakpoint> — <one-line symptom>" \
   --label "<existing-label>" \
