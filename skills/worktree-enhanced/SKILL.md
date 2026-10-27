@@ -30,22 +30,24 @@ Every worktree gets its own dev-server port — never assume port 3000 belongs t
 
 ```bash
 # Resolve this checkout's port: a project script if it has one
-# (scripts/worktree-port.cjs), else the port recorded in .claude/launch.json,
-# else 3000 (the main-checkout default)
+# (scripts/worktree-port.cjs), else the port recorded in .claude/launch.json.
+# No fallback: guessing 3000 would report the main checkout's server as this one's.
 if [ -f scripts/worktree-port.cjs ]; then
   PORT="$(node scripts/worktree-port.cjs)"
 else
-  PORT="$(node -p "require('./.claude/launch.json').configurations[0].port" 2>/dev/null || echo 3000)"
+  PORT="$(node -p "require('./.claude/launch.json').configurations[0].port" 2>/dev/null)"
 fi
 
-DEV_SERVER_PID=$(lsof -ti:"$PORT")
-
-if [ -n "$DEV_SERVER_PID" ]; then
+if [ -z "$PORT" ] || [ "$PORT" = "undefined" ]; then
+  echo "No port recorded for this worktree; assign one (below) before checking for a server"
+elif DEV_SERVER_PID=$(lsof -ti:"$PORT"); [ -n "$DEV_SERVER_PID" ]; then
   echo "Dev server already running on port $PORT (PID: $DEV_SERVER_PID)"
 else
   echo "No dev server running on port $PORT yet"
 fi
 ```
+
+`configurations[0]` assumes the dev server is the first entry. If `launch.json` lists Storybook or an API first, read the dev server's entry instead.
 
 If the project has no per-worktree port yet, give each new worktree its own before starting a server — otherwise every worktree's `npm run dev` fights over the same port. A manual way: pick a free port per worktree and pass it to the dev server (`PORT=3101 npm run dev`, or the framework's port flag), or derive one from the worktree path:
 
