@@ -2,7 +2,7 @@
 name: github-screenshot
 description: >
   Generates GitHub-ready image markdown for screenshots: a github.com ?raw=true link pinned to the
-  commit, which renders in private repos too. Use whenever a PR, issue, or doc needs an image. Trigger on:
+  commit, so it renders even for a private repository. Use whenever a PR, issue, or doc needs an image. Trigger on:
   "add a screenshot to this PR", "embed image in issue", "attach screenshot", "add screenshot to
   docs".
 ---
