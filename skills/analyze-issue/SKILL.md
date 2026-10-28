@@ -109,7 +109,7 @@ Not testing (save for later or explicitly out of scope):
 ## Success criteria
 - [ ] [criterion pulled directly from issue]
 - [ ] [criterion]
-- [ ] Tests cover acceptance criteria without rigging
+- [ ] Each planned test guards one essential behavior (or the bug's regression) without rigging
 - [ ] No duplicate functionality introduced
 
 ## Risks

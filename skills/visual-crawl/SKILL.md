@@ -33,7 +33,7 @@ For keyboard-navigated apps (sections accessed via key bindings rather than URL 
 # Check for existing session first
 bdg status 2>&1 || true
 
-# Start bdg session (headless by default)
+# Start bdg session (headless only when there is no display; on a Mac it opens a window)
 bdg <project-url>
 
 # Create screenshot output directory

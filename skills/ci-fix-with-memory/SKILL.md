@@ -77,6 +77,10 @@ If these don't exist, the skill will create them on first run.
    ### Starting Fresh Investigation
    ```
 
+### Phase 1b: Read the project's scripts
+
+Before running anything, list the scripts the project defines (`scripts` in `package.json`, or the repo's equivalent such as a Makefile or `pyproject.toml`). Map lint, lint-fix, test, and build to the script that does each job. Script names differ between projects, so every command in this skill is an example. If a job has no matching script, skip that phase and say so in the report. Never run a script name you haven't confirmed exists.
+
 ### Phase 2: Get Current CI Status
 
 1. **Fetch current CI check status**
@@ -84,11 +88,13 @@ If these don't exist, the skill will create them on first run.
    gh pr checks [PR_NUMBER]
    ```
 
-2. **For each failing check, get full logs**
+2. **For each failing check, get its log**
    ```bash
-   gh pr checks [PR_NUMBER] --watch
-   # OR
-   gh api repos/{owner}/{repo}/commits/{sha}/check-runs
+   # Find the failing run's ID (the number in the check's URL, or from this list)
+   gh run list --branch [BRANCH] --limit 5
+
+   # Print only the failed steps' output
+   gh run view [RUN_ID] --log-failed
    ```
 
 3. **Create TodoWrite checklist**
@@ -109,7 +115,7 @@ For each failure:
 
 2. **If found in known-issues.md**
    ```markdown
-   ⚠️ Known Issue Detected
+   Known Issue Detected
 
    Failure: [error message]
    Previously Tried: [approach from known-issues.md]
@@ -136,6 +142,8 @@ For each failure:
 
 **For Each Failure Type:**
 
+Script names below are examples. Substitute the project's own from Phase 1b, and skip any step it has no script for.
+
 #### Lint Failures
 ```bash
 # Get all lint errors
@@ -153,8 +161,9 @@ npm run lint && npm run lint:css
 
 #### Test Failures
 ```bash
-# Get all failing tests
-npm test -- --listTests --json 2>&1 | tee test-failures.txt
+# Get the real failures: run the files CI named in its log (Phase 2),
+# or the whole suite if the log doesn't name them
+npm test -- [failing-test-files] 2>&1 | tee test-failures.txt
 
 # Fix one test at a time
 npm test -- [specific-test-file]
@@ -182,15 +191,17 @@ npm run build
 
 **Critical checks before running tests:**
 
-```bash
-# Check if dev server is running
-DEV_SERVER_PID=$(lsof -ti:3000)
+Find this checkout's dev-server port first: the dev server's entry in `.claude/launch.json`, the port in its dev script, or a `PORT` in its env. Don't assume 3000; in a worktree or another app, 3000 is usually someone else's server.
 
-if [ -n "$DEV_SERVER_PID" ]; then
-  echo "✅ Dev server running (PID: $DEV_SERVER_PID)"
+```bash
+# PORT comes from the project (see above). No fallback: a guess reports the wrong server.
+if [ -z "$PORT" ]; then
+  echo "No dev-server port found for this checkout"
+elif DEV_SERVER_PID=$(lsof -ti:"$PORT"); [ -n "$DEV_SERVER_PID" ]; then
+  echo "Dev server running on port $PORT (PID: $DEV_SERVER_PID)"
   echo "Tests will use existing server"
 else
-  echo "⚠️ No dev server found"
+  echo "No dev server on port $PORT"
   echo "Ask user: Should I start dev server?"
 fi
 ```
@@ -198,7 +209,7 @@ fi
 **Never:**
 - Kill the dev server
 - Restart the dev server
-- Run commands that interfere with port 3000
+- Run commands that interfere with its port
 
 ### Phase 6: Commit Safety
 
@@ -208,10 +219,10 @@ fi
 # Check for merge conflict markers
 git diff --check
 
-# Check for common mistakes
-grep -r "<<<<<<< HEAD" src/ && echo "❌ Merge conflicts found" || echo "✅ No merge conflicts"
-grep -r "console.log" src/ && echo "⚠️ Debug code found" || echo "✅ No debug code"
-grep -r "debugger" src/ && echo "⚠️ Debugger statements found" || echo "✅ No debugger"
+# Check the changed lines for common mistakes
+git diff -U0 | grep -E '^\+.*(<<<<<<<|>>>>>>>)' && echo "Merge conflicts found" || echo "No merge conflicts"
+git diff -U0 | grep -E '^\+.*console\.log' && echo "Debug code found" || echo "No debug code"
+git diff -U0 | grep -E '^\+.*debugger' && echo "Debugger statements found" || echo "No debugger"
 ```
 
 **If all checks pass:**
@@ -220,9 +231,7 @@ grep -r "debugger" src/ && echo "⚠️ Debugger statements found" || echo "✅ 
 git add -u
 git commit -m "fix: resolve CI failures
 
-[List of what was fixed]
-
-Applied via ci-fix-with-memory skill"
+[List of what was fixed]"
 
 git push origin [BRANCH]
 ```
@@ -292,9 +301,9 @@ Present final summary:
 - Avoided repeating [specific approaches]
 
 ### Fixes Applied
-✅ [List of successful fixes]
-❌ [List of failed fixes with reasons]
-⏭️ [List of skipped issues]
+- Fixed: [List of successful fixes]
+- Failed: [List of failed fixes with reasons]
+- Skipped: [List of skipped issues]
 
 ### Final CI Status
 - **Lint**: [PASS/FAIL]

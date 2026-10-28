@@ -149,7 +149,7 @@ For each of the top 3 candidates:
 
 **Implementation plan** — 3-5 concrete steps.
 
-**MVP test plan** — 2-4 tests that directly map to acceptance criteria. No "renders without crashing" tests.
+**MVP test plan** — Only the essential tests: one per distinct behavior the change adds or alters, usually one or two, and a regression test for a bug. Plan per behavior, not per criterion. No "renders without crashing" tests.
 
 **Files to modify / create** — Based on codebase exploration, not guessing.
 
@@ -254,7 +254,7 @@ Always end with **one** `/goal` command covering the whole parallel batch from s
 Shape of the command: name every batch issue, give each its own completion condition, and state the isolation requirement.
 
 ```bash
-claude "/goal \"issues #A, #B, #C each have acceptance criteria met, a PR open against develop, and CI green. Run them in parallel as Agent-tool subagents, each in its own git worktree on its own branch.\""
+claude "/goal \"issues #A, #B, #C each have acceptance criteria met, a PR open, and CI green. Run them in parallel as Agent-tool subagents, each in its own git worktree on its own branch.\""
 ```
 
 Rules for the command:

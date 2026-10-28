@@ -85,7 +85,7 @@ flood the main context.
 |---|---|---|
 | Waiting on you | PRs that are green and need a merge or review, decisions a session asked for, a session blocked on an answer | `ci=ok` with review pending, a closing message that ends in a question |
 | Stranded | Worktrees with dirty or unmerged work and no running session or open PR, handoffs nobody picked up | `worktree: ... dirty=N` with no matching PR or live session |
-| (cleanup, not stranded) | A worktree flagged `merged-pr=#N` and `dirty=0`: its PR squash- or rebase-merged, so the commits only look unmerged | goes on the archive-candidates line |
+| (cleanup, not stranded) | A worktree flagged `merged-pr=#N` and `dirty=0`: its HEAD is in a PR that squash- or rebase-merged, so the commits only look unmerged | goes on the archive-candidates line |
 | Ready to pick up | The next issue per active repo | A session's "next:" item first, else the most recent open issue the repo's own priority labels point at |
 | Dormant | Active-on-the-map repos with no origin commits in 30+ days and no open PRs | the `last:` date |
 

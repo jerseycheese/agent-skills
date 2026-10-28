@@ -16,7 +16,7 @@ This skill is project-aware. It adapts to whatever repo you run it from: it disc
 
 ## What to produce
 
-A short closing report with three parts. Keep it tight — colleague-over-coffee tone, not a meeting recap.
+A short closing report with four parts. Keep it tight — colleague-over-coffee tone, not a meeting recap.
 
 - **Summary** — 3–6 bullets of what was actually accomplished. Outcomes, not narration.
 - **Decisions** — anything we decided that future-me will need to know. One bullet each.
@@ -95,7 +95,7 @@ If the project uses Claude Code auto-memory (a `memory/` directory with a `MEMOR
 
 - No emojis anywhere — output, files, or commits.
 - Don't fabricate accomplishments. Empty chats get an honest "nothing concrete shipped" closing.
-- Don't write memory for ephemeral state — see the "What NOT to save in memory" guidance in the user's `~/.claude/CLAUDE.md`.
+- Don't write memory for ephemeral state — follow the memory system's own rules on what not to save.
 - Don't proactively create new docs. Update existing files.
 - One canonical surface per fact.
 - Keep it tight. The whole closure should fit on one screen.

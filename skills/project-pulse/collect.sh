@@ -68,10 +68,16 @@ for gitdir in "$root"/*/.git "$root"/*/*/.git; do
         unmerged=0
         [ -n "$base" ] && unmerged=$(git -C "$wt" rev-list --count "origin/$base..HEAD" 2>/dev/null || echo 0)
         # A squash or rebase merge leaves the branch's own commits off the base, so ask GitHub.
+        # A matching branch name isn't enough: HEAD must be in what the PR merged, or later
+        # commits on the branch would look safe to archive.
         if [ "$unmerged" -gt 0 ] && [ -n "$slug" ] && [ "$branch" != "(detached)" ]; then
-          merged_pr=$(gh pr list -R "$slug" --head "$branch" --state merged --limit 1 \
-            --json number --jq '.[0].number // empty' 2>/dev/null)
-          [ -n "$merged_pr" ] && flags="$flags merged-pr=#$merged_pr"
+          while read -r pr_num pr_head; do
+            if [ -n "$pr_head" ] && git -C "$wt" merge-base --is-ancestor HEAD "$pr_head" 2>/dev/null; then
+              flags="$flags merged-pr=#$pr_num"
+              break
+            fi
+          done < <(gh pr list -R "$slug" --head "$branch" --state merged --limit 5 \
+            --json number,headRefOid --jq '.[] | "\(.number) \(.headRefOid)"' 2>/dev/null)
         fi
         if [ "${dirty:-0}" -gt 0 ] || [ "$unmerged" -gt 0 ] || [ -n "$flags" ]; then
           wt_rel="${wt#"$repo"/}"; [ "$wt" = "$repo" ] && wt_rel="(main checkout)"
