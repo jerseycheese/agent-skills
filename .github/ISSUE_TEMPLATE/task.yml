@@ -1,7 +1,7 @@
 name: Task
 description: Track a scoped engineering task
 labels:
-  - task
+  - documentation
 body:
   - type: input
     id: objective
