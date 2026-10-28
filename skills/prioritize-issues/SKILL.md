@@ -149,7 +149,7 @@ For each of the top 3 candidates:
 
 **Implementation plan** — 3-5 concrete steps.
 
-**MVP test plan** — 2-4 tests that directly map to acceptance criteria. No "renders without crashing" tests.
+**MVP test plan** — Only the essential tests: one per distinct behavior the change adds or alters, usually one or two, and a regression test for a bug. Plan per behavior, not per criterion. No "renders without crashing" tests.
 
 **Files to modify / create** — Based on codebase exploration, not guessing.
 
