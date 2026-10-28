@@ -157,7 +157,7 @@ This is the part that matters most, because a deleted test can't fail to tell yo
 3. **Confirm over-mock and seam findings by breaking the mocked side.** Break the real implementation of the module the test mocks (make the store setter a no-op, make the route reject large bodies, drop a field in the serializer) and run the tests. Undo the break afterwards. Until you've done this, label findings PLAUSIBLE.
    - **Over-mock finding (one test):** run the flagged file. Green means CONFIRMED, since that test can't see the module. Red means the finding was wrong, so drop it.
    - **Seam gap (a boundary):** run the whole relevant suite, not just the flagged file. The flagged file stays green by design, because it mocks the module. The seam gap is CONFIRMED only if every test stays green. If any other test goes red, something does cross the seam, so drop the seam-gap finding. The flagged test can still be an over-mock finding on its own.
-4. `npm run type-check` and `npm run lint` - deleted tests often orphan imports and fixtures.
+4. Lint and type-check with the project's own scripts (`npm run type-check` and `npm run lint` are examples; skip any it does not define) - deleted tests often orphan imports and fixtures.
 5. Report the case count before and after, plus the count of files that lost their last meaningful assertion (that number should be zero).
 
 Steps 2 and 3 are not optional. Everything else in this skill is a heuristic; this is the only step that produces evidence.

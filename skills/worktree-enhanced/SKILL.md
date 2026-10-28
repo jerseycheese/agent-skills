@@ -138,7 +138,8 @@ After worktree created:
 - [ ] Apply 3-attempt limit for failing tests
 
 #### After Completing Work
-- [ ] Run full validation
+- [ ] Run full validation - script names are examples; use the project's own
+      and skip any it does not define
       `npm run lint && npm run type-check && npm test`
 
 - [ ] Create PR or merge

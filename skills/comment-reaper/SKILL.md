@@ -89,7 +89,7 @@ Present these as a single triaged list with `file:line`, the current text, and t
 ## Verify
 
 - Run the audit script again. Report before and after counts per tier - that's the evidence the sweep worked, and it's cheap.
-- `npm run lint` (comments can carry eslint directives; deleting one silently re-enables a rule) and `npm run type-check`.
+- Lint and type-check with the project's own scripts (the names here are examples; skip any it does not define). `npm run lint` matters here because comments can carry eslint directives; deleting one silently re-enables a rule. `npm run type-check` catches the rest.
 - Full test suite if any file with a `SECURITY:` or constraint comment was touched.
 - `git diff` should be **deletions and one-line edits only**. A comment reap that adds lines has turned into a refactor - stop and split it.
 
