@@ -45,11 +45,16 @@ This is an **autonomous workflow** that will:
    gh pr diff [NUMBER]
    ```
 
-3. **Checkout the PR branch**
+3. **Checkout the PR branch and record its head**
    ```bash
    git fetch origin [HEAD_REF]
    git checkout [HEAD_REF]
+   git rev-parse HEAD   # save as [START_SHA] for rollback
    ```
+
+4. **Read the project's scripts**
+
+   List the scripts the project defines (`scripts` in `package.json`, or the repo's equivalent such as a Makefile or `pyproject.toml`). Map lint, type check, CSS lint, and tests to the script that does each job. Script names differ between projects, so every command in this skill is an example. If a job has no matching script, skip that phase and say so in the report. Never run a script name you haven't confirmed exists.
 
 ### Step 2: Categorize Issues
 
@@ -83,7 +88,7 @@ For each **[BLOCKING]** issue:
    Constraint: Only fix this specific issue, don't refactor
    ```
 
-2. **Wait for sub-agent completion** before proceeding to next issue
+2. **Wait for sub-agent completion** before proceeding to next issue. Fix agents run one at a time: they all edit the same branch, so parallel agents overwrite each other.
 
 3. **Track fixes** with TodoWrite for visibility
 
@@ -91,14 +96,21 @@ For each **[BLOCKING]** issue:
 
 **Critical**: Verify dev server status BEFORE running tests
 
+Find this checkout's dev-server port first: the dev server's entry in `.claude/launch.json`, the port in its dev script, or a `PORT` in its env. Don't assume 3000; in a worktree or another app, 3000 is usually someone else's server.
+
 ```bash
-# Check if dev server is already running
-lsof -ti:3000 || echo "No dev server"
+# PORT comes from the project (see above). No fallback: a guess checks the wrong server.
+if [ -z "$PORT" ]; then
+  echo "No dev-server port found for this checkout"
+elif lsof -ti:"$PORT" > /dev/null; then
+  echo "Dev server running on port $PORT; leave it alone"
+else
+  echo "No dev server on port $PORT"
+fi
 
-# If dev server needed but not running, start it in background
-# If dev server already running, leave it alone
+# If tests need a server and none is running, ask the user before starting one.
 
-# Run validation suite
+# Run the validation scripts mapped in Step 1 (examples; skip any the project lacks)
 npm run lint
 npm run type-check
 npm run lint:css
@@ -160,10 +172,10 @@ Present this summary:
 
 ### Final CI Status
 
-- **Lint**: [PASS/FAIL]
-- **Type Check**: [PASS/FAIL]
-- **CSS Lint**: [PASS/FAIL]
-- **Tests**: [PASS/FAIL - with details on any flagged tests]
+- **Lint**: [PASS/FAIL/SKIPPED - no script]
+- **Type Check**: [PASS/FAIL/SKIPPED - no script]
+- **CSS Lint**: [PASS/FAIL/SKIPPED - no script]
+- **Tests**: [PASS/FAIL/SKIPPED - with details on any flagged tests]
 
 ### Next Steps
 
@@ -210,14 +222,14 @@ If in doubt, flag for human review instead of auto-fixing.
 
 If the pipeline produces bad results:
 
-```bash
-# Reset to state before pipeline ran
-git reset --hard origin/[HEAD_REF]
+Step 6 already pushed the fix commit, so `origin/[HEAD_REF]` is the pipeline's own commit and resetting to it undoes nothing. Revert the pipeline's commit instead, which keeps the branch history intact for anyone who pulled it:
 
-# Or revert the commit
+```bash
 git revert [COMMIT_HASH]
 git push origin [HEAD_REF]
 ```
+
+To confirm the branch is back where it started, `git diff [START_SHA] HEAD` (from Step 1) should print nothing.
 
 ## Example Usage
 
@@ -226,7 +238,7 @@ User says: "Auto-review and fix PR #123"
 Pipeline:
 1. Fetches PR #123 diff
 2. Finds 5 blocking issues: 3 lint errors, 1 TypeScript error, 1 missing await
-3. Spawns 5 Task agents to fix each issue in parallel
+3. Spawns a Task agent per issue, one after another
 4. After fixes, runs lint/test suite
 5. All tests pass
 6. Commits: "fix: auto-applied blocking issue fixes from code review"
@@ -247,5 +259,5 @@ In those cases, do a manual review instead.
 
 ## Notes
 
-- Uses Task tool for parallel sub-agents (Claude Code's native parallelization)
+- Uses Task sub-agents one at a time, since every fix lands on the same branch
 - Combines review, implementation, and CI checking into one atomic operation

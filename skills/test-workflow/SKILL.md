@@ -135,12 +135,17 @@ Proceed with:
 
 **Critical check before running tests:**
 
-```bash
-# Check dev server status
-DEV_SERVER_PID=$(lsof -ti:3000)
+Find this checkout's dev-server port first: the dev server's entry in `.claude/launch.json`, the port in its dev script, or a `PORT` in its env. Don't assume 3000; in a worktree or another app, 3000 is usually someone else's server.
 
-if [ -n "$DEV_SERVER_PID" ]; then
-  echo "✅ Dev server running (PID: $DEV_SERVER_PID)"
+```bash
+# PORT comes from the project (see above). No fallback: a guess checks the wrong server.
+DEV_SERVER_PID=$([ -n "$PORT" ] && lsof -ti:"$PORT")
+
+if [ -z "$PORT" ]; then
+  echo "No dev-server port found for this checkout"
+  NEED_SERVER=true
+elif [ -n "$DEV_SERVER_PID" ]; then
+  echo "✅ Dev server running on port $PORT (PID: $DEV_SERVER_PID)"
   echo "Tests will use existing server"
   NEED_SERVER=false
 else
@@ -235,7 +240,7 @@ echo "Phase 3: E2E Tests"
 echo "=================="
 
 # Verify dev server still running
-if ! lsof -ti:3000 > /dev/null; then
+if ! lsof -ti:"$PORT" > /dev/null; then
   echo "❌ Dev server not running! Cannot proceed."
   exit 1
 fi
