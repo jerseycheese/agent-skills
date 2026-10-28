@@ -17,7 +17,7 @@ One supported layout: keep a single clone of your skills repo (referred to here 
 1. Edit a skill once in `<repo>`.
 2. `git push` if the repo is shared or published.
 3. Claude Code loads it via a real symlink at `~/.claude/skills/<name>` -> `<repo>/skills/<name>` — edits are live immediately, no copy step needed. Don't remove these symlinks.
-4. Codex and Antigravity hydrate `~/.agents/skills/` from the same repo via the copy/symlink paths below (or the `find-skills` installer).
+4. Codex hydrates `~/.agents/skills/` and Antigravity hydrates `~/.gemini/config/skills/` from the same repo via the copy/symlink paths below (or the `find-skills` installer).
 
 New skills added to the repo need a matching symlink created in `~/.claude/skills/` (`ln -s <repo>/skills/<name> ~/.claude/skills/<name>`) — this doesn't happen automatically. The manual copy/prune/hash steps below still apply when working outside the repo or syncing a one-off.
 
@@ -45,11 +45,12 @@ If the docs conflict with this skill, follow the docs and update this skill as p
 
 ### Shared Agent Skills layout
 
-Prefer these paths for skills intended to work in both Codex and Antigravity:
-- User: `$HOME/.agents/skills/<skill-name>/SKILL.md`
+Workspace skills meant for both Codex and Antigravity go in one shared path:
 - Workspace: `$REPO_ROOT/.agents/skills/<skill-name>/SKILL.md`
 
-Use `.agents/skills` as the shared mirror for Codex/Antigravity whenever practical. Do not prune unrelated `.agents/skills` entries unless the user explicitly asks; other tools may own them.
+User-level skills have no shared path. `$HOME/.agents/skills` is Codex's user path only; Antigravity's global path is `~/.gemini/config/skills` (see Antigravity below), so a global skill for both needs a copy in each.
+
+Use workspace `.agents/skills` as the shared mirror for Codex/Antigravity whenever practical. Do not prune unrelated `.agents/skills` entries unless the user explicitly asks; other tools may own them.
 
 ### Claude Code
 
@@ -108,7 +109,7 @@ Antigravity defaults to `.agents/skills` for workspace skills, and that workspac
 1. Research current official Codex/Antigravity guidance first.
 2. Normalize the source skill: exact `SKILL.md`, valid frontmatter, focused trigger description, and clean resource folders.
 3. Copy the full skill directory, including `scripts/`, `references/`, `assets/`, and provider metadata.
-4. Write shared Codex/Antigravity copies to `.agents/skills` - this is the canonical mirror for both providers.
+4. Write shared Codex/Antigravity workspace copies to `$REPO_ROOT/.agents/skills` - the canonical mirror for both providers. For user-level copies, write Codex to `~/.agents/skills` and Antigravity to `~/.gemini/config/skills`.
 5. Do not mirror to `.codex/skills` (causes duplicate skill loads in Codex). Do not create new `~/.gemini/skills` copies; only touch that legacy path when pruning an explicitly identified stale mirror or maintaining an explicitly confirmed Antigravity CLI shared fallback.
 6. Prune stale provider mirrors only when the source canon and ownership are clear.
 7. Preserve intentional provider-specific deviations only after confirming the reason.

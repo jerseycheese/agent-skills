@@ -84,9 +84,9 @@ Each agent looks for skills in a specific directory. Copy or symlink the skill f
 | --- | --- | --- |
 | Claude Code | `~/.claude/skills/<skill-name>/` | `.claude/skills/<skill-name>/` |
 | Codex | `~/.agents/skills/<skill-name>/` | `.agents/skills/<skill-name>/` |
-| Antigravity | `~/.agents/skills/<skill-name>/` | `.agents/skills/<skill-name>/` |
+| Antigravity | `~/.gemini/config/skills/<skill-name>/` (CLI only: `~/.gemini/antigravity-cli/skills/<skill-name>/`) | `.agents/skills/<skill-name>/` |
 
-The `.agents/skills` path is the interoperable spot — Codex and Antigravity both read from it, so it's the path to pick if you want one copy to cover both.
+At project level, `.agents/skills` is the interoperable spot: Codex and Antigravity both read it, so one copy covers both. At user level they differ. Codex reads `~/.agents/skills`, but Antigravity doesn't, so a global skill needs a copy in each.
 
 Quick install for a single skill in Claude Code:
 
