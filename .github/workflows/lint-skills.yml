@@ -12,3 +12,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 .github/scripts/lint-skills.py
       - run: python3 .github/scripts/eval-triggers.py
+      - run: find skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - run: bash .github/scripts/test-pr-ready.sh

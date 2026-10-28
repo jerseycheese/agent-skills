@@ -76,6 +76,8 @@ Keep descriptions short: what the skill does, when to use it, and three or four 
 
 After changing a description, run `python3 .github/scripts/eval-triggers.py`. It checks the prompts in `evals/triggers.tsv` (one `skill<TAB>prompt` per line; a leading `-` means that skill must not win) against every description. It's a word-overlap proxy, not the real router, so it catches a dropped trigger phrase but not a subtle misroute. CI runs it too, and it fails when a skill has no line in the file, so a new skill needs at least one request that should pick it. Add a line when a skill misfires.
 
+CI also runs `bash -n` over every script under `skills/`, and `.github/scripts/test-pr-ready.sh`, which drives `pr-ready.sh`'s merge gate against a fake `gh`. If you change that gate, add a case there.
+
 ## Install
 
 Each agent looks for skills in a specific directory. Copy or symlink the skill folder (the whole thing, not just `SKILL.md`) into the right path for whichever tool you're using.
