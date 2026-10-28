@@ -49,8 +49,9 @@ Detect what changed:
 git diff --name-only HEAD
 git diff --cached --name-only
 
-# Or compare against the default branch
-git diff origin/HEAD...HEAD --name-only
+# Or compare against the base branch (develop if it exists, else main)
+base=$(git rev-parse --verify -q origin/develop || echo origin/main)
+git diff "$base"...HEAD --name-only
 ```
 
 Categorize changes:
