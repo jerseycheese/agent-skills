@@ -46,7 +46,7 @@ find-replace. The comparisons in step 2 are where most of the value is.
    Leave worked examples alone unless a model *name* changed. They reference the main table's
    choices by name, so tier-only changes don't touch them.
 
-5. Bump every "Last verified" date you touched to today.
+5. Bump every "Last checked" date you touched to today.
 
 6. Run `/route` once afterward on a real task to check the output still reads right end to
    end.

@@ -43,8 +43,8 @@ actual cognitive demand, not the category label.
 
 ## Rate-limit reference card
 
-Per provider: rolling windows, approximate messages per window per model, and the date you last
-checked. Mark numbers as observed or published.
+Per provider: rolling windows, approximate messages per window per model, and a "Last checked"
+date. Mark numbers as observed or published.
 
 ## Budget signals
 

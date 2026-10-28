@@ -254,7 +254,7 @@ Always end with **one** `/goal` command covering the whole parallel batch from s
 Shape of the command: name every batch issue, give each its own completion condition, and state the isolation requirement.
 
 ```bash
-claude "/goal \"issues #A, #B, #C each have acceptance criteria met, a PR open against develop, and CI green. Run them in parallel as Agent-tool subagents, each in its own git worktree on its own branch.\""
+claude "/goal \"issues #A, #B, #C each have acceptance criteria met, a PR open, and CI green. Run them in parallel as Agent-tool subagents, each in its own git worktree on its own branch.\""
 ```
 
 Rules for the command:
