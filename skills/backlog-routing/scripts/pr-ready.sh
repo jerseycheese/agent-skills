@@ -9,8 +9,10 @@
 # Needs only `gh`, authenticated, bash 3.2 or newer.
 #
 # What counts, and why:
-# - CI: the newest check run per check name on the head sha (a re-run replaces the run it
-#   re-ran), plus commit statuses. No checks reported yet is pending, not a pass or a failure.
+# - CI: the newest check run per check suite and check name on the head sha, plus commit
+#   statuses. A re-run stays in its workflow run's check suite, so it replaces the run it re-ran;
+#   two workflows with a job of the same name are separate suites, so both count. No checks
+#   reported yet is pending, not a pass or a failure.
 # - Review: passes on either of two sources. Which reviewer a repo uses, and in what order, is the
 #   adapter's call, not this script's.
 #   - Codex: the summary marker comment exists, every row of its table says Completed, and the sha
@@ -138,7 +140,7 @@ done <<<"$pr_lines"
 
 ci_jq='
 (if .total_count > (.check_runs | length) then "overflow\t-" else empty end),
-(.check_runs | group_by(.name)[] | max_by(.id)
+(.check_runs | group_by([.check_suite.id, .name])[] | max_by(.id)
   | "\(if .status != "completed" then "pending" elif (.conclusion | IN("success", "neutral", "skipped")) then "pass" else "fail" end)\t\(.name)")'
 status_jq='
 .statuses[]
