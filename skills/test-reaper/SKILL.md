@@ -41,7 +41,7 @@ Start from how the project runs its tests, not from the patterns below. Check th
 
 | Find | JS/TS (Jest, Vitest) | Python (pytest) | Go |
 |---|---|---|---|
-| Case | `it(`, `test(` | `def test_` | `func Test` |
+| Case | `it(`, `test(` | `def test_` | `func TestX(t *testing.T)`, not `TestMain` |
 | Skipped | `.skip`, `xit(`, `xdescribe(`, `.todo(` | `mark.skip`, `mark.xfail` | `t.Skip(` |
 | Focused | `.only(`, `fit(` | none built in | none built in |
 | Snapshot | `toMatchSnapshot` | `snapshot` (syrupy) | none built in |
