@@ -174,8 +174,10 @@ git log --all --full-history -- path/to/file.tsx
 # 3. Remove the file, or just the specific export (Edit tool)
 rm path/to/file.tsx
 
-# 4. Verify
-npm run build && npm run test && npm run storybook
+# 4. Verify - script names are examples. Use the project's own build, test and
+#    Storybook *build* scripts, and skip any it does not define. Never serve
+#    Storybook (`storybook dev`): it never exits.
+npm run build && npm test && npm run build-storybook
 ```
 
 ### Step 4: Commit
