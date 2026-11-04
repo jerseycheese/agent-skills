@@ -140,7 +140,7 @@ Always include at least one mobile, one tablet, and one desktop. Always include 
 - **Accessibility** — a11y tree makes sense, roles correct, labels present
 - **Component consistency** — same component looks same across pages
 - **Data display** — numbers formatted, dates localized, no "undefined" or "NaN"
-- **Design system alignment** — do visible components map to existing Storybook stories or showcase specimens? Flag orphan patterns (custom one-off UI that should use a canonical component or be promoted to one)
+- **Design system alignment** — do visible components map to entries in the project's component catalog or showcase (Storybook stories, specimen pages), if it has one? Flag orphan patterns (custom one-off UI that should use a canonical component or be promoted to one)
 
 ### Phase 2: Execute the Crawl
 
@@ -442,12 +442,12 @@ bdg dom eval "$(cat /tmp/ds-alignment.js)"
 **Cross-reference against canon sources:**
 - `src/components/ui/` — shadcn/Radix primitives (Button, Badge, Card, Dialog, Input, etc.)
 - `src/components/shared/` — composite components (EmptyState, NotFoundState, PageLayout, TabNavigation, ActionButtonGroup, Hero, wizard system, etc.)
-- Storybook stories
+- Component catalog stories (Storybook or similar), if the project has one
 - Dev showcase pages (`/dev/design-system*`)
 
 **Classify each element into three buckets:**
 - **Should use existing** — bespoke UI where a canon component already exists (e.g., inline empty state div instead of `EmptyState` component, unstyled `<button>` instead of `Button`)
-- **New pattern to canonize** — useful pattern not yet in the component library; recommend adding a Storybook story / showcase entry
+- **New pattern to canonize** — useful pattern not yet in the component library; recommend adding it to the project's component catalog or showcase, if it has one
 - **Aligned** — correctly uses the canonical version (positive confirmation)
 
 ### Phase 3: Cross-Page Checks
@@ -511,7 +511,7 @@ After the crawl, produce a structured findings report. Group by severity:
 
 ## Design System Alignment
 - [page] > [component]: Should use existing `ComponentName` from `src/components/ui/` — currently bespoke
-- [page] > [pattern]: New pattern, recommend adding to Storybook as `StoryName`
+- [page] > [pattern]: New pattern, recommend adding to the component catalog as `Name`
 - [page] > [component]: Aligned with `ComponentName`
 
 ## Observations (not bugs, just notes)
