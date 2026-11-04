@@ -111,8 +111,10 @@ For each module the mocked-everywhere search lists, find the tests that use it f
 ```bash
 # Prints tests that name the module without mocking it. Add its class or export name with |.
 NAMES='/sessionStore'
-comm -23 <(git grep -lE "$NAMES" -- "${TESTS[@]}" | sort) <(git grep -lE "$MOCK['\"][^'\"]*($NAMES)" -- "${TESTS[@]}" | sort)
+comm -23 <(git grep --untracked -lE "$NAMES" -- "${TESTS[@]}" | sort) <(git grep --untracked -lE "$MOCK['\"][^'\"]*($NAMES)" -- "${TESTS[@]}" | sort)
 ```
+
+This is the one search where no hits is itself the finding, so it includes untracked files: an in-progress test may already cross the seam. Keep `--untracked` on both sides, or an in-progress test that mocks the module gets listed as a real user. The searches above only find candidates, so they stay tracked-only.
 
 The judgments grep can't make, which you make by reading:
 
