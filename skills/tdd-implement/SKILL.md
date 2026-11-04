@@ -18,11 +18,15 @@ Before writing a single test, be clear on:
 - What are the acceptance criteria (from the issue, the user, or both)?
 - What already exists in the codebase that you can build on?
 
+- How does this project run its tests, build, and lint? Check its manifest, CI config, and docs. Commands below are examples, so use the project's own and skip any it doesn't define. Stick to one-shot commands, never a dev server or watcher.
+
 ```bash
-# Discover existing patterns before planning
-find src/ -name "*.test.*" -o -name "*.spec.*" | head -5  # How tests are structured here
-find src/ -name "*.ts" -o -name "*.tsx" | xargs grep -l "[relevant term]" | head -5
+# Discover existing patterns before planning. Extend the pattern for the project's layout.
+git ls-files | grep -E '(^|/)(tests?|__tests__)/|[._](test|spec)\.|(^|/)test_'  # How tests are structured here
+git grep -n "[relevant term]"
 ```
+
+No test files here doesn't mean there are no tests. The pattern may have missed the project's layout, so check the test command before planning from scratch.
 
 ## Step 2: Define the MVP test plan
 
@@ -59,13 +63,13 @@ Show the user the test plan and confirm it looks right before writing code.
 Implement the tests. Run them — they should fail. If they pass without any implementation, the tests aren't testing anything real.
 
 ```bash
-# Run just the new tests
-npm test -- --testPathPattern="[feature name]"
-# or: npx jest [test file]
-# or: whatever the project's test command is
+# Run just the new tests with the project's test command. For example:
+npm test -- [test file]
+pytest [test file]
+go test ./[package] -run [TestName]
 ```
 
-Confirm they're red before proceeding.
+Confirm they're red before proceeding. Read the output as well as the exit code, because some runners exit 0 when a script fails to load.
 
 ## Step 4: Implement the minimum to pass (green)
 
@@ -76,20 +80,13 @@ Lean on existing code:
 - Reuse utilities that already exist
 - Follow patterns established by similar features in the codebase
 
-Run tests after each meaningful chunk of implementation:
-
-```bash
-npm test -- --testPathPattern="[feature name]"
-```
+Run the new tests with the same command after each meaningful chunk of implementation.
 
 When all tests pass, stop adding code.
 
 ## Step 5: Build verification
 
-```bash
-npm run build
-# or: npx tsc --noEmit  (TypeScript check without full build)
-```
+Run the project's one-shot build or type-check (`npm run build`, `npx tsc --noEmit`, `cargo check`, and `mypy .` are examples). Skip this step if it defines neither.
 
 Fix any type errors or build failures before continuing.
 
@@ -106,23 +103,23 @@ Run tests after every non-trivial refactor to confirm they're still green.
 ## Step 7: Cleanup
 
 ```bash
-# Check for debug statements left behind
-git diff --name-only | xargs grep -n "console\." 2>/dev/null
+# Check changed and new files for debug statements left behind. Add the language's own debug calls.
+{ git diff --name-only HEAD; git ls-files -o --exclude-standard; } | tr '\n' '\0' | xargs -0 grep -nE 'console\.log|debugger|breakpoint\(\)' 2>/dev/null
 ```
 
 Remove:
-- `console.log` / debug statements from production code
+- Debug statements from production code
 - Commented-out code blocks
 - TODO comments that were resolved
 - Unused imports
 
 ## Step 8: Final verification
 
-```bash
-npm test          # all tests pass
-npm run build     # clean build
-npm run lint      # no new lint errors
-```
+Run the project's own checks, and skip any it doesn't define:
+
+- The full test suite passes (`npm test`, `pytest`, `go test ./...`, or a script of its own).
+- The build is clean, using the same command as Step 5.
+- The linter reports no new errors (`npm run lint`, `ruff check`, `golangci-lint run`).
 
 If any of these fail, fix the root cause — don't suppress warnings or skip checks.
 
@@ -142,4 +139,4 @@ Never modify a test just to make it pass. A passing test that doesn't validate t
 
 ## Running the loop with `/goal`
 
-The red-green-refactor cycle is a natural fit for `/goal` once the Step 2 test plan is confirmed: the loop has a crisp, evaluator-checkable completion condition, e.g. `/goal "all MVP tests green, build clean, lint clean, no debug statements left"`. Let it iterate across turns rather than babysitting each red-to-green step — just keep the "never rig a test to pass" rule above as the hard constraint.
+The red-green-refactor cycle is a natural fit for `/goal` once the Step 2 test plan is confirmed: the loop has a crisp, evaluator-checkable completion condition, e.g. `/goal "all MVP tests green, the project's build and lint clean, no debug statements left"`. Let it iterate across turns rather than babysitting each red-to-green step — just keep the "never rig a test to pass" rule above as the hard constraint.

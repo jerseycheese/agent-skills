@@ -13,11 +13,13 @@ A test suite rots differently than source. Nothing goes red, nothing gets flagge
 
 `dead-code-cleanup` only removes tests and stories whose subject is gone (orphaned files). This skill owns the classic markers too: snapshot-only tests, `renders without crashing`, `toBeDefined`, `.skip`. In a repo that has been kept up, those all return zero, and a sweep that stops there finds nothing. The sections below go further.
 
-Also watch for a newer kind of dead weight: a test added after deleting stale text/config/CSS that reads a file and asserts the old string is gone. Those tests feel like regression coverage, but most of them only make the deletion permanent in the narrowest possible way. If the old reference comes back, the real question is whether behavior broke; if no behavior is observed, the test is just a grep with a Jest wrapper.
+Also watch for a newer kind of dead weight: a test added after deleting stale text/config/CSS that reads a file and asserts the old string is gone. Those tests feel like regression coverage, but most of them only make the deletion permanent in the narrowest possible way. If the old reference comes back, the real question is whether behavior broke; if no behavior is observed, the test is just a grep with a test-runner wrapper.
 
 The distinction that drives every decision here: **a test that asserts nothing and a test that asserts the wrong thing are different problems.** The first is dead weight and gets reaped. The second is a coverage gap wearing a passing test as a disguise, and reaping it silently drops the intent. Never treat them the same.
 
 There's one more failure this skill has to look for, and you can't see it by reading tests one at a time: **the seam gap.** The page test mocks the API client. The route test feeds the handler a hand-rolled 300-byte fixture. The E2E spec opens the dialog and never submits it. Each test is honest about its own half, and every one of them is green. Still, nothing ever sends a realistic payload across the real boundary, so a payload-size limit or a missing field ships without anyone noticing. A sweep that only judges individual tests will call this suite clean. Judge the seams too.
+
+This skill works in any stack. Examples use Jest and React names because they're familiar, so read `toHaveBeenCalled` as "the framework's call-check" and `render` as "the framework's way to exercise the unit." The judgment rules apply the same everywhere.
 
 ## Sibling skills, so you don't do their job
 
@@ -30,57 +32,89 @@ There's one more failure this skill has to look for, and you can't see it by rea
 1. `git fetch && git status`. Right base branch, up to date.
 2. **Confirm the suite is green before you start.** Reaping into a red suite makes it impossible to tell what your deletion broke. If it's red, that's `test-fix`'s job first.
 3. Scope it. One domain or directory per pass.
-4. **Read the test setup file.** This is the step people skip and it invalidates the whole audit. A global `jest.mock()` in `jest.setup.ts` means whole suites run against auto-mocks, and a test that looks like it "only asserts mocks" may have no other option available to it. Know what's globally mocked before you judge a single test.
+4. **Read the test setup file.** This is the step people skip and it invalidates the whole audit. Find whatever the runner loads before every test (`jest.setup.ts`, `conftest.py`, `TestMain`, a shared harness script). A global `jest.mock()` in `jest.setup.ts` means whole suites run against auto-mocks, and a test that looks like it "only asserts mocks" may have no other option available to it. Know what's globally mocked before you judge a single test.
 5. Get the before count: total files, total cases, and the per-pattern counts below.
 
 ## Detection
 
+Start from how the project runs its tests, not from the patterns below. Check the manifest, CI config, and docs for the test command, then read the runner and a few test files to see what marks a case, a check, and a mock. Fill in the search variables from what you find:
+
+| Find | JS/TS (Jest, Vitest) | Python (pytest) | Go |
+|---|---|---|---|
+| Case | `it(`, `test(` | `def test_` | `func TestX(t *testing.T)`, not `TestMain` |
+| Skipped | `.skip`, `xit(`, `xdescribe(`, `.todo(` | `mark.skip`, `mark.xfail` | `t.Skip(` |
+| Focused | `.only(`, `fit(` | none built in | none built in |
+| Snapshot | `toMatchSnapshot` | `snapshot` (syrupy) | none built in |
+| Mock | `jest.mock(`, `vi.mock(` | `patch(`, `monkeypatch`, `mocker` | `gomock`, hand-written fakes |
+| Call-check | `toHaveBeenCalled*` | `assert_called*` | `.EXPECT()`, `AssertCalled` |
+
+With no framework, the harness defines these. In a Godot project of `extends SceneTree` scripts, a case might be a `func *_test` and a check a `check(` helper. Some stacks also keep tests inside source files (Rust's `#[test]`, doctests), so add those files to `TESTS` or search them by case marker.
+
+**A zero only counts if the search could have hit.** `git grep` returns nothing, with no error, when a path doesn't exist or a pattern doesn't fit the language. So check that the baseline finds your test files and cases before trusting any zero below. Also keep `\b` out of these patterns, because `git grep -E` on macOS silently matches nothing with it.
+
 ```bash
-# Volume baseline
-find src -name '*.test.ts*' -o -name '*.spec.ts*' | wc -l
-grep -rhoE '\b(it|test)\(' src --include='*.test.ts*' | wc -l
+# Run as one script so the variables stay set. To scope a pass, run it from that directory.
+
+# Test files and everything else. Extend both for the project's layout, and exclude vendored code.
+TESTS=('*.test.*' '*.spec.*' '*_test.*' '*_spec.*' ':(glob)**/test_*' ':(glob)**/test/**' ':(glob)**/tests/**' ':(glob)**/__tests__/**')
+SOURCE=(. ':!*.test.*' ':!*.spec.*' ':!*_test.*' ':!*_spec.*' ':(exclude,glob)**/test_*' ':(exclude,glob)**/test/**' ':(exclude,glob)**/tests/**' ':(exclude,glob)**/__tests__/**')
+
+# The project's vocabulary, from the table. These values are Jest's.
+CASE="^[[:space:]]*(it|test)\\(['\"\`][^'\"\`]+"
+SKIPPED='\.skip|xit\(|xdescribe\(|\.todo\('
+FOCUSED='\.only\('
+SNAPSHOT='toMatchSnapshot|renders without crashing'
+MOCK='(jest|vi)\.mock\('
+MOCKED_LOCAL="$MOCK['\"](\.{1,2}|@)/[^'\"]+"   # a mock of the project's own module, with its target
+CALL_CHECK='toHaveBeenCalled'
+ABSENT='readFileSync|readFile|not\.toContain|not\.toMatch|not\.toHaveProperty'  # add the language's file reads and absence checks
+
+# Volume baseline. Zero of either means fix the variables above, not a clean suite.
+git ls-files -- "${TESTS[@]}" | wc -l
+git grep -hE "$CASE" -- "${TESTS[@]}" | wc -l
 
 # Classic markers (often zero in a maintained repo - confirm, don't assume)
-grep -rn 'toMatchSnapshot\|renders without crashing' src --include='*.test.ts*'
-grep -rn '\.skip\|xit(\|xdescribe(\|\.todo(' src --include='*.test.ts*'
-grep -rn '\.only(' src --include='*.test.ts*'   # must be zero; a leaked .only silently skips the suite
+git grep -nE "$SNAPSHOT" -- "${TESTS[@]}"
+git grep -nE "$SKIPPED" -- "${TESTS[@]}"
+git grep -nE "$FOCUSED" -- "${TESTS[@]}"   # must be zero; a leaked focus marker silently skips the rest
 
 # Duplicate test names within one file
-for f in $(find src -name '*.test.ts*'); do
-  dup=$(grep -oE "^\s*(it|test)\(['\"\`][^'\"\`]+" "$f" | sed -E "s/^\s*(it|test)\(['\"\`]//" \
-        | sort | uniq -d)
-  [ -n "$dup" ] && echo "=== $f" && echo "$dup"
-done
+git grep -oE "$CASE" -- "${TESTS[@]}" | sed -E 's/:[[:space:]]+/:/' | sort | uniq -d
 
 # Mock-assertion-only candidates: every expect targets a mock and only checks call-ness
-grep -rn 'toHaveBeenCalled\|toHaveBeenCalledWith\|toHaveBeenCalledTimes' src --include='*.test.ts*' | wc -l
+git grep -hE "$CALL_CHECK" -- "${TESTS[@]}" | wc -l
 
 # Negative source/reference guards: read a file/string and only assert retired text is absent
-rg -n "readFileSync|readFile|not\\.toContain|not\\.toMatch|not\\.toHaveProperty|does not|no longer|retired|removed|dead|dropped" \
-  src scripts __tests__ tests -g '*.test.*' -g '*.spec.*'
+git grep -nE "$ABSENT|does not|no longer|retired|removed|dead|dropped" -- "${TESTS[@]}"
 
 # Name/behavior mismatch: suites promising integration or persistence
-find src -name '*integration*.test.ts*' -o -name '*persistence*.test.ts*'
+git ls-files -- "${TESTS[@]}" | grep -iE 'integration|persistence'
 
 # Mock density: files mocking many modules (a triage pointer, not a finding)
-for f in $(find src -name '*.test.ts*'); do
-  c=$(grep -c 'jest\.mock(' "$f"); [ "$c" -ge 6 ] && echo "$c $f"
-done | sort -rn
+git grep -cE "$MOCK" -- "${TESTS[@]}" | awk -F: '$NF >= 6 {print $NF, $1}' | sort -rn
 
 # Promised collaborator mocked: integration/persistence files that mock a local module
-grep -lE "jest\.mock\(['\"](\.{1,2}|@)/" $(find src -name '*integration*.test.ts*' -o -name '*persistence*.test.ts*')
+git grep -lE "$MOCKED_LOCAL" -- "${TESTS[@]}" | grep -iE 'integration|persistence'
 
-# Mocked everywhere: for each local module that gets mocked, which tests import it for real?
-grep -rhoE "jest\.mock\(['\"]@/[^'\"]+" src --include='*.test.ts*' | sed -E "s/jest\.mock\(['\"]//" \
-  | sort | uniq -c | sort -rn
-# then, per module: grep -rlE "from ['\"]<module>['\"]" src --include='*.test.ts*' | xargs grep -L "jest.mock('<module>'"
+# Mocked everywhere: which local modules get mocked, and how often
+git grep -hoE "$MOCKED_LOCAL" -- "${TESTS[@]}" | sed -E "s/$MOCK['\"]//" | sort | uniq -c | sort -rn
 
 # Stub children: component tests that replace a child component with a stub
-grep -rlE "jest\.mock\(['\"]\.{1,2}/[A-Z][A-Za-z]+['\"]" src --include='*.test.tsx'
+git grep -lE "$MOCK['\"]\.{1,2}/[A-Z][A-Za-z]+['\"]" -- "${TESTS[@]}"
 
 # Size/count/time gates in source: each one needs a test that actually crosses it
-grep -rnE '[0-9]+ ?\* ?1024|MAX_[A-Z_]+|_LIMIT\b|_BYTES\b|timeout' src --include='*.ts' | grep -v test
+git grep -nE '[0-9]+ ?\* ?1024|MAX_[A-Z_]+|_LIMIT|_BYTES|[Tt]imeout' -- "${SOURCE[@]}" ':!*.md' ':!*.lock' ':!*lock.json'
 ```
+
+For each module the mocked-everywhere search lists, find the tests that use it for real. The same module goes by several names, so search them all: its alias path, its relative paths, its file stem, and its class name. `@/state/sessionStore`, `../../../state/sessionStore`, and `../sessionStore` are one module, and a search on one spelling reports a seam gap that isn't there.
+
+```bash
+# Prints tests that name the module without mocking it. Add its class or export name with |.
+NAMES='/sessionStore'
+comm -23 <(git grep --untracked -lE "$NAMES" -- "${TESTS[@]}" | sort) <(git grep --untracked -lE "$MOCK['\"][^'\"]*($NAMES)" -- "${TESTS[@]}" | sort)
+```
+
+This is the one search where no hits is itself the finding, so it includes untracked files: an in-progress test may already cross the seam. Keep `--untracked` on both sides, or an in-progress test that mocks the module gets listed as a real user. The searches above only find candidates, so they stay tracked-only.
 
 The judgments grep can't make, which you make by reading:
 
@@ -98,9 +132,9 @@ Shapes to look for:
 
 - **Mock plus filler.** Every assertion is either a call-check or an existence-only filler (`toBeDefined`, `toBeTruthy`, `not.toBeNull`). A `toBeInTheDocument` on specific copy is a real observation, not filler. It's mock-only with padding. The padding is the only reason a strict "every assertion is a call-check" rule misses it.
 - **Mock echo.** The case stubs a return value and then asserts the result equals that stub. It can only fail if the code stops passing values through. Skip it when pass-through is the unit's job (see "Pass-through contracts" under the keep list).
-- **Promised collaborator mocked.** A file named `*integration*` or `*persistence*` that `jest.mock`s the local module its name promises to integrate with. It's the name/behavior mismatch at file scale, and it outranks any single mismatched case.
+- **Promised collaborator mocked.** A file named `*integration*` or `*persistence*` that mocks the local module its name promises to integrate with. It's the name/behavior mismatch at file scale, and it outranks any single mismatched case.
 - **Stub-child render.** A component test replaces a child with a stub and then only asserts the stub rendered. That's wiring, not behavior.
-- **Mocked everywhere.** A local module that's `jest.mock`ed in several files, where every test that imports it for real uses a hand-rolled fixture. On paper its seam is covered from both sides. In practice nothing has ever crossed it.
+- **Mocked everywhere.** A local module that's mocked in several files, where every test that imports it for real uses a hand-rolled fixture. On paper its seam is covered from both sides. In practice nothing has ever crossed it.
 - **Unrealistic fixtures at a gated branch.** The source has a size, count, or time gate (a payload limit, pagination, a timeout, an oversize code path). The fixtures are orders of magnitude below it, or leave out fields the real type carries (an image, a nested list). If no test crosses the threshold, that branch is untested no matter how many green tests sit around it. When one gate like this is untested, check the sibling routes that share it. The same bug tends to come back one route over.
 
 Mock density on its own is a pointer, not a finding. An orchestrator that mocks 15 collaborators to test sequencing, abort handling, and ordering can be a very good test. Read what it asserts before judging it.
@@ -111,7 +145,7 @@ Mock density on its own is a pointer, not a finding. An orchestrator that mocks 
 
 - **Duplicate test names in one file.** Read both. If they assert the same thing, delete one. If they assert different things, the name is wrong - rename it, don't delete it. Six cases sharing one name is always the first, and it's usually a copy-paste block where the names never got updated.
 - **Self-duplicating assertions.** A case that re-asserts exactly what an earlier case in the same describe already covered, often visible from a comment like `// Should still render without crashing` sitting above an assertion that the name renders. Delete the later one.
-- **Leaked `.only`.** Not a reap, a bug: it silently skips every other case in the file. Remove it and re-run the suite, because whatever it was hiding is about to surface.
+- **Leaked `.only` or other focus marker.** Not a reap, a bug: it silently skips every other case in the file. Remove it and re-run the suite, because whatever it was hiding is about to surface.
 - **The classic markers, if present.** Snapshot-only cases, bare `expect(Component).toBeDefined()`, `renders without crashing` with no other assertion.
 - **Pure negative reference guards after a deletion.** If a test reads docs/source/CSS/config and only asserts a removed string, selector, key, or literal is absent, delete it when there is no corresponding positive invariant. Examples: "does not reference the removed template step", "does not carry retired selector X", or "has dropped old marketing phrase Y" with no behavior-level assertion.
 
@@ -131,7 +165,7 @@ Present as one triaged list: `file:line`, current name, what it actually asserts
 - **Anything that can fail for a real reason.** The bar is not "is this test interesting," it's "could this catch a regression." A boring test that guards a boring invariant stays.
 - **Regression anchors.** A test whose comment cites the bug it guards is doing exactly its job, however odd the assertion looks. The odd assertion is usually the point.
 - **Security/privacy redaction checks.** Negative assertions like `not.toContain(secret)` or `not.toHaveProperty('apiKey')` can be the behavior. Do not lump them in with deleted-reference guards.
-- **Tests that look trivial because the setup is global.** Back to pre-flight step 4: if `jest.setup.ts` auto-mocks the module, a mock assertion may be the only observation available. Judge it against what the harness makes possible.
+- **Tests that look trivial because the setup is global.** Back to pre-flight step 4: if the global setup auto-mocks the module, a mock assertion may be the only observation available. Judge it against what the harness makes possible.
 - **The last remaining test for a module.** Even a weak one is a smoke test. Rewrite it rather than leaving the module bare.
 - **Orchestrator tests that mock collaborators on purpose.** If the unit under test is the sequencing (what runs first, what blocks on what, what gets skipped on abort), mocking the steps is the right design. These count as good when they also assert on the orchestrator's own output.
 - **Callback-prop contracts.** For a controlled component, `onChange` / `onSave` / `onCancel` is the public API. A call-check that deep-checks the callback's argument observes exactly what a consumer would see. Don't flag it just because the matcher is `toHaveBeenCalledWith`.
