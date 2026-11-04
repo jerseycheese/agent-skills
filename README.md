@@ -31,11 +31,11 @@ Grouped by type. Each links to its `SKILL.md`.
 - **[tdd-implement](skills/tdd-implement/SKILL.md)** — Red-green-refactor. Tests track acceptance criteria, not implementation details.
 - **[test-fix](skills/test-fix/SKILL.md)** — Diagnose and fix failing tests with a hard 3-attempt limit per failure to avoid debugging spirals.
 - **[test-workflow](skills/test-workflow/SKILL.md)** — Pick and run the right suite (unit, E2E, visual, CSS lint) after a source edit, before commit.
-- **[test-reaper](skills/test-reaper/SKILL.md)** — Find and remove dead or trivial tests — duplicates and tests that only assert a mock was called — after confirming the suite is green.
+- **[test-reaper](skills/test-reaper/SKILL.md)** — Find and remove dead or trivial tests and stories — duplicates and tests that only assert a mock was called — after confirming the suite is green.
 
 ### Cleanup — code, comments, docs, prose
 
-- **[dead-code-cleanup](skills/dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, files, and stale stories after verifying nothing uses them.
+- **[dead-code-cleanup](skills/dead-code-cleanup/SKILL.md)** — Find and remove orphaned code, files, and tests in any stack after verifying nothing uses them.
 - **[comment-reaper](skills/comment-reaper/SKILL.md)** — Remove unnecessary comments — the ones that restate the code — after reading the code under each to confirm it's redundant, not load-bearing.
 - **[doc-rot](skills/doc-rot/SKILL.md)** — Sniff out stale docs, comments, docstrings, and commented-out code. Grounds every staleness call against the actual code, auto-fixes the safe rot, surfaces judgment calls.
 - **[plain-language-audit](skills/plain-language-audit/SKILL.md)** — Sweep comments, docs, and UI copy for jargon, AI writing tells, and verbosity. Auto-fixes the unambiguous stuff, surfaces judgment calls.

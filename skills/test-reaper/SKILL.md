@@ -1,9 +1,9 @@
 ---
 name: test-reaper
 description: >
-  Finds and removes dead or trivial tests: duplicates, mock-only asserts, render checks that prove
-  nothing. Also finds over-mocked tests and seam gaps, where no test sends a realistic payload
-  across a boundary. Trigger on: "reap tests", "our tests don't test anything", "too much
+  Finds and removes dead or trivial tests and stories: duplicates, mock-only asserts, render checks
+  that prove nothing. Also finds over-mocked tests and seam gaps, where no test sends a realistic
+  payload across a boundary. Trigger on: "reap tests", "our tests don't test anything", "too much
   mocking", "why didn't tests catch this".
 ---
 
@@ -11,7 +11,7 @@ description: >
 
 A test suite rots differently than source. Nothing goes red, nothing gets flagged, the count keeps climbing, and confidence quietly decouples from coverage. The tests that hurt most are not the broken ones - they're the ones that pass no matter what you do to the code.
 
-`dead-code-cleanup` only removes tests whose subject is gone (orphaned files). This skill owns the classic markers too: snapshot-only tests, `renders without crashing`, `toBeDefined`, `.skip`. In a repo that has been kept up, those all return zero, and a sweep that stops there finds nothing. The sections below go further.
+`dead-code-cleanup` only removes tests and stories whose subject is gone (orphaned files). This skill owns the classic markers too: snapshot-only tests, `renders without crashing`, `toBeDefined`, `.skip`. In a repo that has been kept up, those all return zero, and a sweep that stops there finds nothing. The sections below go further.
 
 Also watch for a newer kind of dead weight: a test added after deleting stale text/config/CSS that reads a file and asserts the old string is gone. Those tests feel like regression coverage, but most of them only make the deletion permanent in the narrowest possible way. If the old reference comes back, the real question is whether behavior broke; if no behavior is observed, the test is just a grep with a Jest wrapper.
 
@@ -22,7 +22,7 @@ There's one more failure this skill has to look for, and you can't see it by rea
 ## Sibling skills, so you don't do their job
 
 - `test-fix` repairs failing tests, with a 3-attempt limit. Red tests are its problem, not this skill's.
-- `dead-code-cleanup` removes tests whose *subject* is gone. If the component was deleted, that's a dead-code sweep.
+- `dead-code-cleanup` removes tests and stories whose *subject* is gone. If the component was deleted, that's a dead-code sweep.
 - `kiss` trims test coverage added beyond the scope of a change. That's a diff-level lens; this is a suite-level one.
 
 ## Pre-flight
@@ -147,6 +147,33 @@ A rewrite suggestion has to be concrete, or "rewrite" turns into "never." Pick t
 - **Cross the seam once.** Build the request body the way the real client does, hand it to the real route handler (`await POST(new Request(url, { method: 'POST', body }))`), and assert on the response status and shape. One such test per seam is usually enough.
 - **Use production-shaped fixtures at gates.** Build the fixture from the shared factory, or from a captured real payload, and push at least one case past each size/count/time threshold in the source. A 1x1 image stub or a short asset path does not count for a code path that exists because real images are megabytes.
 - **Delete the stub-child mock.** Render the real child, unless it drags in a network or provider dependency. In that case, stub that dependency instead.
+
+## Stories
+
+If the project uses Storybook or a similar component catalog, treat stories as part of the sweep. Propose them in the Tier 2 batch, because a story is documentation and no suite goes red when one goes missing.
+
+```bash
+git grep -n 'args: {}' -- '*.stories.*'
+git grep -nE 'With[0-9]+|WithExactly' -- '*.stories.*'
+```
+
+Propose removing:
+
+- **Duplicate states.** Two stories showing the identical state.
+- **Default-only stories.** `args: {}` when a Default story exists.
+- **Contrived edge cases.** Scenarios nobody will hit, like a string of exactly 47 characters.
+- **Micro-variations.** A story per prop value (padding 5, 6, 7).
+
+Keep stories that show a distinct state or that a developer would need to see, like error versus loading. Also keep:
+
+- stories with play functions, decorators, or meaningful parameters (viewport, theme, background), even if the args look simple
+- stories added for a real regression or referenced in docs
+- foundation stories that others build on
+- size or color variants in a design system where the full set is the documentation
+
+When unsure if a story has value, ask. Before removing one, read it and search the docs for its title or id. In a file that mixes good and trivial stories, use Edit to remove only the trivial exports.
+
+After removing any, run the project's one-shot story build (`build-storybook` in a standard setup), never the dev server. That build is the check for stories, so Verify step 2 doesn't apply to them.
 
 ## Verify
 
