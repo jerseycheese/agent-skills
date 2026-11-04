@@ -42,7 +42,8 @@ git grep -nw "candidate_name"
 # Test, story, and fixture files whose subject may be gone (extend for the project's layout)
 git ls-files | grep -E '(^|/)(tests?|__tests__|fixtures)/|[._](test|spec|stories)\.|(^|/)test_'
 
-# Debug leftovers in source, not tests or docs (a print is often intentional, so read each hit)
+# Debug leftovers. Replace src with the project's source folders, since a missing path just returns
+# nothing. Add the language's own debug calls. A print is often intentional, so read each hit.
 git grep -nE 'console\.log|debugger|breakpoint\(\)|DEBUG *= *[Tt]rue' -- src ':!*test*' ':!*spec*'
 ```
 
