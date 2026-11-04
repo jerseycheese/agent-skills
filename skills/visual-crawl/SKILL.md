@@ -61,7 +61,7 @@ If `guard` fails: `bdg stop && bdg <correct-url>`, wait, re-pin with `bdg cdp Pa
 
 Many apps store state client-side (localStorage, IndexedDB, a Redux/Zustand `persist` layer) rather than a server database, so a dynamic route like `/worlds/[id]` or `/items/:id` 404s or renders empty on a fresh crawl unless something exists to view. Skipping these routes loses real coverage — detail, edit, and nested views are exactly where layout bugs hide.
 
-**Check for an existing seeding convention first.** Most projects with any E2E/visual-regression testing already have one — a Playwright `seedTestData`/`addInitScript` helper, a Cypress fixture loader, a storybook decorator. Search for it (`grep -rl "addInitScript\|seedTestData\|seed.*fixture" tests/ e2e/ cypress/`) before improvising; reusing the project's own seed data keeps the crawl's dynamic-route content realistic instead of inventing placeholder data that doesn't match the app's actual shapes.
+**Check for an existing seeding convention first.** Most projects with any E2E/visual-regression testing already have one — a Playwright `seedTestData`/`addInitScript` helper, a Cypress fixture loader, a storybook decorator. Search for it (`git grep -lE 'addInitScript|seedTestData|seed.*fixture'`) before improvising; reusing the project's own seed data keeps the crawl's dynamic-route content realistic instead of inventing placeholder data that doesn't match the app's actual shapes.
 
 **Port it to `bdg` if it's Playwright-only.** `bdg cdp Page.addScriptToEvaluateOnNewDocument --params '{"source": "..."}'` runs before any page script on the *next* navigation — the same timing as Playwright's `page.addInitScript`. Take the project's existing seed logic (usually: write records into `localStorage`/IndexedDB, set a `window.__TEST__`-style flag some apps check to expose their store on `window` or skip auth) and inline it as a standalone script with the actual fixture data embedded, since the injected script runs outside the project's own module system and can't `import` anything:
 
@@ -140,7 +140,7 @@ Always include at least one mobile, one tablet, and one desktop. Always include 
 - **Accessibility** — a11y tree makes sense, roles correct, labels present
 - **Component consistency** — same component looks same across pages
 - **Data display** — numbers formatted, dates localized, no "undefined" or "NaN"
-- **Design system alignment** — do visible components map to existing Storybook stories or showcase specimens? Flag orphan patterns (custom one-off UI that should use a canonical component or be promoted to one)
+- **Design system alignment** — do visible components map to entries in the project's component catalog or showcase (Storybook stories, specimen pages), if it has one? Flag orphan patterns (custom one-off UI that should use a canonical component or be promoted to one)
 
 ### Phase 2: Execute the Crawl
 
@@ -400,7 +400,19 @@ bdg cdp Emulation.clearDeviceMetricsOverride
 
 After crawling each page's breakpoints, inventory the visible UI patterns and cross-reference against the project's component library. This catches orphan patterns — bespoke UI that should either use an existing canonical component or be promoted into one.
 
-**How to inventory:** Query the DOM for interactive/structural elements and classify them:
+**Find the project's canon first, once per run.** Read its docs (`CLAUDE.md`, `AGENTS.md`, `README`, `DESIGN.md`) for where components and any showcase live, and check the manifest for a component library dependency. Then search the tree:
+
+```bash
+# Component folders, biggest first. Extend for the project's layout.
+git ls-files | grep -iE '(^|/)(components?|ui|widgets)/' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
+
+# Component catalog or showcase
+git ls-files | grep -iE '\.stories\.|(^|/)\.storybook/|design-?system|style-?guide|showcase|pattern-?library' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
+```
+
+Finding nothing is a real result. Say so in the report, skip the "Should use existing" bucket, and flag only patterns that repeat across pages as new patterns.
+
+**How to inventory:** Query the DOM for interactive/structural elements and classify them. These selectors match on class names, so utility classes (Tailwind) and hashed CSS modules return little. Read a few canon components for what they actually render (a shared class, `data-slot`, a test ID), adapt the selectors to match, and trust the screenshots over this list:
 
 ```bash
 cat > /tmp/ds-alignment.js << 'JSEOF'
@@ -439,15 +451,15 @@ JSEOF
 bdg dom eval "$(cat /tmp/ds-alignment.js)"
 ```
 
-**Cross-reference against canon sources:**
-- `src/components/ui/` — shadcn/Radix primitives (Button, Badge, Card, Dialog, Input, etc.)
-- `src/components/shared/` — composite components (EmptyState, NotFoundState, PageLayout, TabNavigation, ActionButtonGroup, Hero, wizard system, etc.)
-- Storybook stories
-- Dev showcase pages (`/dev/design-system*`)
+**Cross-reference against the canon you found.** A project may have only some of these, and the paths and names are examples:
+- Primitives — the folder or package the app gets its buttons and inputs from (e.g., `src/components/ui/` with shadcn/Radix, or a dependency like MUI)
+- Composites — shared components built from those (e.g., `src/components/shared/` with `EmptyState`, `PageLayout`)
+- Component catalog stories (Storybook or similar), if the project has one
+- Dev showcase pages (e.g., `/dev/design-system`), if the project has them
 
 **Classify each element into three buckets:**
 - **Should use existing** — bespoke UI where a canon component already exists (e.g., inline empty state div instead of `EmptyState` component, unstyled `<button>` instead of `Button`)
-- **New pattern to canonize** — useful pattern not yet in the component library; recommend adding a Storybook story / showcase entry
+- **New pattern to canonize** — useful pattern not yet in the component library; recommend adding it to the project's component catalog or showcase, if it has one
 - **Aligned** — correctly uses the canonical version (positive confirmation)
 
 ### Phase 3: Cross-Page Checks
@@ -510,8 +522,8 @@ After the crawl, produce a structured findings report. Group by severity:
 - [page] @ [breakpoint] > [component]: [description] — screenshot: [filename]
 
 ## Design System Alignment
-- [page] > [component]: Should use existing `ComponentName` from `src/components/ui/` — currently bespoke
-- [page] > [pattern]: New pattern, recommend adding to Storybook as `StoryName`
+- [page] > [component]: Should use existing `ComponentName` from [component library path] — currently bespoke
+- [page] > [pattern]: New pattern, recommend adding to the component catalog as `Name`
 - [page] > [component]: Aligned with `ComponentName`
 
 ## Observations (not bugs, just notes)

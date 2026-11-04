@@ -42,9 +42,14 @@ git grep -nw --untracked "candidate_name"
 # Test, story, and fixture files whose subject may be gone (extend for the project's layout)
 git ls-files | grep -E '(^|/)(tests?|__tests__|fixtures)/|[._](test|spec|stories)\.|(^|/)test_'
 
-# Debug leftovers. Replace src with the project's source folders, since a missing path just returns
-# nothing. Add the language's own debug calls. A print is often intentional, so read each hit.
-git grep -nE 'console\.log|debugger|breakpoint\(\)|DEBUG *= *[Tt]rue' -- src ':!*test*' ':!*spec*'
+# Everything but test files, by exact name and folder. A loose ':!*test*' or ':!*spec*' also drops
+# source like planning_inspector.gd or latest.py. Extend for the project's layout, and exclude vendored code.
+SOURCE=(. ':!*.test.*' ':!*.spec.*' ':!*_test.*' ':!*_spec.*' ':(exclude,glob)**/test_*' ':(exclude,glob)**/test/**' ':(exclude,glob)**/tests/**' ':(exclude,glob)**/__tests__/**')
+
+# Debug leftovers. To scope a pass, run it from that directory. A print is often intentional, so read each hit.
+# The pattern fits JS and Python, so add the language's own debug calls: GDScript needs print( and a bare
+# breakpoint. Keep \b out of them, because git grep -E on macOS silently matches nothing with it.
+git grep -nE 'console\.log|debugger|breakpoint\(\)|DEBUG *= *[Tt]rue' -- "${SOURCE[@]}" ':!*.md' ':!*.json'
 ```
 
 ### Phase 2: Validate before marking dead
