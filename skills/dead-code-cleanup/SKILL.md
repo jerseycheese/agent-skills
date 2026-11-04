@@ -36,8 +36,8 @@ Start with the project's own tooling. Check its manifest and docs for a dead-cod
 Fall back to a search where no tool covers the code:
 
 ```bash
-# References to a candidate, across every tracked file (run once per name it goes by)
-git grep -nw "candidate_name"
+# References to a candidate, including untracked work in progress (run once per name it goes by)
+git grep -nw --untracked "candidate_name"
 
 # Test, story, and fixture files whose subject may be gone (extend for the project's layout)
 git ls-files | grep -E '(^|/)(tests?|__tests__|fixtures)/|[._](test|spec|stories)\.|(^|/)test_'
@@ -103,7 +103,7 @@ Order matters: orphaned tests and other orphans first, then the implementation l
 
 For each removal:
 
-1. Double-check references: `git grep -nw` each name the candidate goes by.
+1. Double-check references: `git grep -nw --untracked` each name the candidate goes by.
 2. Check history for why it existed: `git log --all --full-history -- path/to/file`.
 3. Remove the file with `rm`, or just the specific symbol with the Edit tool.
 4. Verify with the project's own build, test, and other one-shot checks, and skip any it doesn't define. Include a docs or component-catalog build if the project has one. Never start a dev server or watcher to verify, because it never exits.
