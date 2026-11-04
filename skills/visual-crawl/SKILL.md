@@ -61,7 +61,7 @@ If `guard` fails: `bdg stop && bdg <correct-url>`, wait, re-pin with `bdg cdp Pa
 
 Many apps store state client-side (localStorage, IndexedDB, a Redux/Zustand `persist` layer) rather than a server database, so a dynamic route like `/worlds/[id]` or `/items/:id` 404s or renders empty on a fresh crawl unless something exists to view. Skipping these routes loses real coverage — detail, edit, and nested views are exactly where layout bugs hide.
 
-**Check for an existing seeding convention first.** Most projects with any E2E/visual-regression testing already have one — a Playwright `seedTestData`/`addInitScript` helper, a Cypress fixture loader, a storybook decorator. Search for it (`git grep -lE 'addInitScript|seedTestData|seed.*fixture'`) before improvising; reusing the project's own seed data keeps the crawl's dynamic-route content realistic instead of inventing placeholder data that doesn't match the app's actual shapes.
+**Check for an existing seeding convention first.** Most projects with any E2E/visual-regression testing already have one — a Playwright `seedTestData`/`addInitScript` helper, a Cypress fixture loader, a storybook decorator. Search for it (`git grep --untracked -lE 'addInitScript|seedTestData|seed.*fixture'`) before improvising; reusing the project's own seed data keeps the crawl's dynamic-route content realistic instead of inventing placeholder data that doesn't match the app's actual shapes.
 
 **Port it to `bdg` if it's Playwright-only.** `bdg cdp Page.addScriptToEvaluateOnNewDocument --params '{"source": "..."}'` runs before any page script on the *next* navigation — the same timing as Playwright's `page.addInitScript`. Take the project's existing seed logic (usually: write records into `localStorage`/IndexedDB, set a `window.__TEST__`-style flag some apps check to expose their store on `window` or skip auth) and inline it as a standalone script with the actual fixture data embedded, since the injected script runs outside the project's own module system and can't `import` anything:
 
@@ -404,10 +404,10 @@ After crawling each page's breakpoints, inventory the visible UI patterns and cr
 
 ```bash
 # Component folders, biggest first. Extend for the project's layout.
-git ls-files | grep -iE '(^|/)(components?|ui|widgets)/' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
+git ls-files -co --exclude-standard | grep -iE '(^|/)(components?|ui|widgets)/' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
 
 # Component catalog or showcase
-git ls-files | grep -iE '\.stories\.|(^|/)\.storybook/|design-?system|style-?guide|showcase|pattern-?library' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
+git ls-files -co --exclude-standard | grep -iE '\.stories\.|(^|/)\.storybook/|design-?system|style-?guide|showcase|pattern-?library' | cut -d/ -f1-3 | sort | uniq -c | sort -rn | head -20
 ```
 
 Finding nothing is a real result. Say so in the report, skip the "Should use existing" bucket, and flag only patterns that repeat across pages as new patterns.
