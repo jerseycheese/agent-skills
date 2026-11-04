@@ -11,7 +11,7 @@ description: >
 
 A test suite rots differently than source. Nothing goes red, nothing gets flagged, the count keeps climbing, and confidence quietly decouples from coverage. The tests that hurt most are not the broken ones - they're the ones that pass no matter what you do to the code.
 
-`dead-code-cleanup` only removes tests whose subject is gone (orphaned files). This skill owns the classic markers too: snapshot-only tests, `renders without crashing`, `toBeDefined`, `.skip`. In a repo that has been kept up, those all return zero, and a sweep that stops there finds nothing. The sections below go further.
+`dead-code-cleanup` only removes tests and stories whose subject is gone (orphaned files). This skill owns the classic markers too: snapshot-only tests, `renders without crashing`, `toBeDefined`, `.skip`. In a repo that has been kept up, those all return zero, and a sweep that stops there finds nothing. The sections below go further.
 
 Also watch for a newer kind of dead weight: a test added after deleting stale text/config/CSS that reads a file and asserts the old string is gone. Those tests feel like regression coverage, but most of them only make the deletion permanent in the narrowest possible way. If the old reference comes back, the real question is whether behavior broke; if no behavior is observed, the test is just a grep with a Jest wrapper.
 
@@ -153,8 +153,8 @@ A rewrite suggestion has to be concrete, or "rewrite" turns into "never." Pick t
 If the project uses Storybook or a similar component catalog, treat stories as part of the sweep. Propose them in the Tier 2 batch, because a story is documentation and no suite goes red when one goes missing.
 
 ```bash
-grep -rn "args: {}" --include='*.stories.*' .
-grep -rnE "With[0-9]+|WithExactly" --include='*.stories.*' .
+git grep -n 'args: {}' -- '*.stories.*'
+git grep -nE 'With[0-9]+|WithExactly' -- '*.stories.*'
 ```
 
 Propose removing:
@@ -171,7 +171,9 @@ Keep stories that show a distinct state or that a developer would need to see, l
 - foundation stories that others build on
 - size or color variants in a design system where the full set is the documentation
 
-When unsure if a story has value, ask. After removing any, run the project's one-shot story build (`build-storybook` in a standard setup), never the dev server.
+When unsure if a story has value, ask. Before removing one, read it and search the docs for its title or id. In a file that mixes good and trivial stories, use Edit to remove only the trivial exports.
+
+After removing any, run the project's one-shot story build (`build-storybook` in a standard setup), never the dev server. That build is the check for stories, so Verify step 2 doesn't apply to them.
 
 ## Verify
 

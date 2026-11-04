@@ -36,14 +36,14 @@ Start with the project's own tooling. Check its manifest and docs for a dead-cod
 Fall back to a search where no tool covers the code:
 
 ```bash
-# References to a candidate, across every tracked file
+# References to a candidate, across every tracked file (run once per name it goes by)
 git grep -nw "candidate_name"
 
 # Test, story, and fixture files whose subject may be gone (extend for the project's layout)
 git ls-files | grep -E '(^|/)(tests?|__tests__|fixtures)/|[._](test|spec|stories)\.|(^|/)test_'
 
-# Debug leftovers (a print is often intentional, so read each hit)
-git grep -nE 'console\.log|debugger|breakpoint\(\)|DEBUG *= *[Tt]rue'
+# Debug leftovers in source, not tests or docs (a print is often intentional, so read each hit)
+git grep -nE 'console\.log|debugger|breakpoint\(\)|DEBUG *= *[Tt]rue' -- src ':!*test*' ':!*spec*'
 ```
 
 ### Phase 2: Validate before marking dead
@@ -57,7 +57,7 @@ For each candidate, check all of these:
 5. Not referenced in config or build files (manifests, framework config, CI, scripts)
 6. Not used by a test, story, or tool that should stay
 7. Not referenced in docs
-8. No string references, including templates, scenes, and data files: `git grep -w "candidate_name"`
+8. No string references, including templates, scenes, and data files. Search every name the candidate goes by, because a file stem often differs from what callers write: the symbol, the class or export name, the file stem, and its path. For example, `post_mortem.gd` may only be referenced as `PostMortem`.
 
 ### Phase 3: Categorize
 
@@ -102,7 +102,7 @@ Order matters: orphaned tests and other orphans first, then the implementation l
 
 For each removal:
 
-1. Double-check references: `git grep -w "candidate_name"`.
+1. Double-check references: `git grep -nw` each name the candidate goes by.
 2. Check history for why it existed: `git log --all --full-history -- path/to/file`.
 3. Remove the file with `rm`, or just the specific symbol with the Edit tool.
 4. Verify with the project's own build, test, and other one-shot checks, and skip any it doesn't define. Include a docs or component-catalog build if the project has one. Never start a dev server or watcher to verify, because it never exits.
