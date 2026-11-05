@@ -280,6 +280,7 @@ cat > /tmp/color-check.js << 'JSEOF'
     var out = [];
     for (var i = 0; i < st.length; i++) {
       var n = st[i];
+      if (typeof n !== "string") continue;
       if (n.indexOf("--") !== 0 && /color|background|fill|stroke|shadow|border|outline/.test(n) && lit(st.getPropertyValue(n))) out.push(n + ": " + st.getPropertyValue(n));
     }
     return out.join("; ");
@@ -328,6 +329,7 @@ An empty result never means the page is clean; it means this snippet found nothi
 - CSS-in-JS injected after the check runs
 - Non-arbitrary utility classes like `text-red-500`, which map to a palette rather than a literal
 - Colors set by script or in `<canvas>`, and inline `<svg>` color attributes (`fill="#f00"`)
+- Each list stops at 20 entries in stylesheet order, so a list of exactly 20 is truncated, and vendor rules loaded first can push out the app's own
 
 ##### Empty states
 ```bash
