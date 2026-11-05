@@ -131,7 +131,7 @@ Always include at least one mobile, one tablet, and one desktop. Always include 
 **C) Audit focus** — pick 2-3 focus areas per page from this rotating list:
 - **Layout integrity** — overflow, clipping, overlap, whitespace collapse
 - **Typography** — font-family matches tokens, sizes consistent, no orphan lines
-- **Color tokens** — hardcoded colors vs CSS variables, contrast issues
+- **Color tokens** — hardcoded colors vs CSS variables (inline styles, stylesheet rules, and arbitrary-value utility classes), contrast issues
 - **Empty states** — what happens with no data / null values
 - **Interactive elements** — buttons clickable, form inputs work
 - **Interactive states** — hover/focus/active legibility, not just clickability (see the dedicated check below — this is easy to skip and catches real bugs)
@@ -266,17 +266,70 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 
 ##### Color token check
 ```bash
-# Find inline color/background styles (potential hardcoded values)
+# Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
-Array.from(document.querySelectorAll("[style]")).filter(function(el) {
-  return /color|background/.test(el.getAttribute("style"));
-}).map(function(el) {
-  var cls = (el.className || "").toString().split(" ").slice(0,2).join(".");
-  return el.tagName + "." + cls + " -> " + el.getAttribute("style").substring(0, 80);
-}).slice(0, 20)
+(function() {
+  var fn = /^(inherit|initial|unset|revert|currentcolor|transparent)$/i;
+  var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
+  function lit(v) {
+    if (!v || /var\(|url\(/.test(v)) return false;
+    if (fnRe.test(v)) return true;
+    return v.split(/[\s,]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !fn.test(t) && CSS.supports("color", t); });
+  }
+  function bad(st) {
+    var out = [];
+    for (var i = 0; i < st.length; i++) {
+      var n = st[i];
+      if (typeof n !== "string") continue;
+      if (n.indexOf("--") !== 0 && /color|background|fill|stroke|shadow|border|outline/.test(n) && lit(st.getPropertyValue(n))) out.push(n + ": " + st.getPropertyValue(n));
+    }
+    return out.join("; ");
+  }
+  var r = { inline: [], stylesheet: [], utility: [], scanned: { elements: 0, sheets: 0, skippedSheets: 0, rules: 0, shadowRoots: 0 } };
+  var seen = [];
+  function walk(sheet) {
+    if (seen.indexOf(sheet) >= 0) return;
+    seen.push(sheet);
+    var rules;
+    try { rules = sheet.cssRules; } catch (e) { r.scanned.skippedSheets++; return; }
+    r.scanned.sheets++;
+    (function each(list) {
+      Array.from(list).forEach(function(rule) {
+        r.scanned.rules++;
+        if (rule.styleSheet) walk(rule.styleSheet);
+        if (rule.style && r.stylesheet.length < 20) {
+          var b = bad(rule.style);
+          if (b) r.stylesheet.push((rule.selectorText || rule.keyText) + " { " + b + " }");
+        }
+        if (rule.cssRules) each(rule.cssRules);
+      });
+    })(rules);
+  }
+  Array.from(document.styleSheets).concat(Array.from(document.adoptedStyleSheets || [])).forEach(walk);
+  var utilRe = /\[[^\]]*(#[0-9a-f]{3,8}|\b(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\()[^\]]*\]/i;
+  Array.from(document.querySelectorAll("*")).forEach(function(el) {
+    r.scanned.elements++;
+    if (el.shadowRoot) r.scanned.shadowRoots++;
+    var tag = el.tagName + "." + (el.getAttribute("class") || "").split(/\s+/).slice(0, 2).join(".");
+    var b = el.style && bad(el.style);
+    if (b && r.inline.length < 20) r.inline.push(tag + " -> " + b.substring(0, 80));
+    (el.getAttribute("class") || "").split(/\s+/).forEach(function(c) {
+      if (utilRe.test(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
+    });
+  });
+  return r;
+})()
 JSEOF
 bdg dom eval "$(cat /tmp/color-check.js)"
 ```
+
+An empty result never means the page is clean; it means this snippet found nothing in what it could read. Carry the `scanned` counts into the report's Coverage line (see the template) so the reader can see how much was read. The snippet can't see:
+- Cross-origin stylesheets (counted in `skippedSheets`)
+- Shadow DOM contents (counted in `shadowRoots`, not scanned)
+- CSS-in-JS injected after the check runs
+- Non-arbitrary utility classes like `text-red-500`, which map to a palette rather than a literal
+- Colors set by script or in `<canvas>`, and inline `<svg>` color attributes (`fill="#f00"`)
+- Each list stops at 20 entries in stylesheet order, so a list of exactly 20 is truncated, and vendor rules loaded first can push out the app's own
 
 ##### Empty states
 ```bash
@@ -505,6 +558,7 @@ After the crawl, produce a structured findings report. Group by severity:
 **Pages crawled:** [list]
 **Breakpoints tested:** [list per page]
 **Focus areas:** [list per page]
+**Color check coverage:** [per page: sheets read / skipped, rules, shadowRoots, from the color check's `scanned` counts; empty findings do not mean no hardcoded colors]
 
 ## Critical (broken functionality / data errors)
 - [page] @ [breakpoint]: [description] — screenshot: [filename]
