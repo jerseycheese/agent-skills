@@ -269,107 +269,65 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 # Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
 (function() {
-  var colorRe = /#(?:[0-9a-fA-F]{3,8})\b|rgba?\(|hsla?\(/i;
-  var colorProps = ["color", "background", "background-color", "border-color", "outline-color", "fill", "stroke"];
-
-  var inlineEls = document.querySelectorAll("[style]");
-  var inline = [];
-  for (var i = 0; i < inlineEls.length; i++) {
-    var el = inlineEls[i];
-    var styleAttr = el.getAttribute("style") || "";
-    if (colorRe.test(styleAttr)) {
-      if (inline.length < 20) {
-        var cls = (el.className || "").toString().split(" ").slice(0, 2).join(".");
-        inline.push(el.tagName + "." + cls + " -> " + styleAttr.substring(0, 80));
-      }
-    }
+  var fn = /^(inherit|initial|unset|revert|currentcolor|transparent)$/i;
+  var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
+  function lit(v) {
+    if (!v || /var\(|url\(/.test(v)) return false;
+    if (fnRe.test(v)) return true;
+    return v.split(/[\s,]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !fn.test(t) && CSS.supports("color", t); });
   }
-
-  var sheets = document.styleSheets;
-  var sheetsRead = 0;
-  var skippedSheets = 0;
-  var rulesCount = 0;
-  var stylesheet = [];
-
-  function checkRules(ruleList) {
-    for (var r = 0; r < ruleList.length; r++) {
-      var rule = ruleList[r];
-      rulesCount++;
-      if (rule.style && rule.selectorText) {
-        if (stylesheet.length < 20) {
-          for (var p = 0; p < colorProps.length; p++) {
-            var prop = colorProps[p];
-            var val = rule.style.getPropertyValue(prop);
-            if (val && colorRe.test(val) && val.indexOf("var(") === -1) {
-              stylesheet.push(rule.selectorText + " { " + prop + ": " + val + " }");
-              if (stylesheet.length >= 20) {
-                break;
-              }
-            }
-          }
-        }
-      }
-      if (rule.cssRules) {
-        try {
-          checkRules(rule.cssRules);
-        } catch (e) {}
-      }
+  function bad(st) {
+    var out = [];
+    for (var i = 0; i < st.length; i++) {
+      var n = st[i];
+      if (n.indexOf("--") !== 0 && /color|background|fill|stroke|shadow|border|outline/.test(n) && lit(st.getPropertyValue(n))) out.push(n + ": " + st.getPropertyValue(n));
     }
+    return out.join("; ");
   }
-
-  for (var s = 0; s < sheets.length; s++) {
+  var r = { inline: [], stylesheet: [], utility: [], scanned: { elements: 0, sheets: 0, skippedSheets: 0, rules: 0, shadowRoots: 0 } };
+  var seen = [];
+  function walk(sheet) {
+    if (seen.indexOf(sheet) >= 0) return;
+    seen.push(sheet);
     var rules;
-    try {
-      rules = sheets[s].cssRules;
-    } catch (e) {
-      skippedSheets++;
-      continue;
-    }
-    if (!rules) {
-      skippedSheets++;
-      continue;
-    }
-    sheetsRead++;
-    try {
-      checkRules(rules);
-    } catch (e) {}
-  }
-
-  var utilityEls = document.querySelectorAll("[class]");
-  var utilityRe = /\[(#|rgb|hsl)[^\]]*\]/;
-  var utility = [];
-  for (var u = 0; u < utilityEls.length && utility.length < 20; u++) {
-    var uEl = utilityEls[u];
-    var classAttr = (uEl.getAttribute("class") || "").toString();
-    if (utilityRe.test(classAttr)) {
-      var parts = classAttr.split(/\s+/);
-      for (var c = 0; c < parts.length; c++) {
-        if (utilityRe.test(parts[c])) {
-          if (utility.length < 20) {
-            utility.push(uEl.tagName + "." + parts[c]);
-          }
+    try { rules = sheet.cssRules; } catch (e) { r.scanned.skippedSheets++; return; }
+    r.scanned.sheets++;
+    (function each(list) {
+      Array.from(list).forEach(function(rule) {
+        r.scanned.rules++;
+        if (rule.styleSheet) walk(rule.styleSheet);
+        if (rule.style && r.stylesheet.length < 20) {
+          var b = bad(rule.style);
+          if (b) r.stylesheet.push((rule.selectorText || rule.keyText) + " { " + b + " }");
         }
-      }
-    }
+        if (rule.cssRules) each(rule.cssRules);
+      });
+    })(rules);
   }
-
-  return {
-    inline: inline,
-    stylesheet: stylesheet,
-    utility: utility,
-    scanned: {
-      inlineEls: inlineEls.length,
-      sheets: sheetsRead,
-      skippedSheets: skippedSheets,
-      rules: rulesCount
-    }
-  };
+  Array.from(document.styleSheets).concat(Array.from(document.adoptedStyleSheets || [])).forEach(walk);
+  var utilRe = /\[[^\]]*(#[0-9a-f]{3,8}|\b(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\()[^\]]*\]/i;
+  Array.from(document.querySelectorAll("*")).forEach(function(el) {
+    r.scanned.elements++;
+    if (el.shadowRoot) r.scanned.shadowRoots++;
+    var tag = el.tagName + "." + (el.getAttribute("class") || "").split(/\s+/).slice(0, 2).join(".");
+    var b = el.style && bad(el.style);
+    if (b && r.inline.length < 20) r.inline.push(tag + " -> " + b.substring(0, 80));
+    (el.getAttribute("class") || "").split(/\s+/).forEach(function(c) {
+      if (utilRe.test(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
+    });
+  });
+  return r;
 })()
 JSEOF
 bdg dom eval "$(cat /tmp/color-check.js)"
 ```
 
-This check covers literal colors in inline styles, accessible stylesheet rules, and arbitrary utility classes like `bg-[#ff0000]`. It can't see cross-origin stylesheets (counted in `skippedSheets`), CSS-in-JS injected later, or non-arbitrary utility classes like `text-red-500` which map to a palette rather than a literal. Empty findings with `skippedSheets > 0` or `rules = 0` do not mean the page is clean.
+An empty result never means the page is clean; it means this snippet found nothing in what it could read. Carry the `scanned` counts into the report's Coverage line (see the template) so the reader can see how much was read. The snippet can't see:
+- Cross-origin stylesheets (counted in `skippedSheets`)
+- Shadow DOM contents (counted in `shadowRoots`, not scanned)
+- CSS-in-JS injected after the check runs
+- Non-arbitrary utility classes like `text-red-500`, which map to a palette rather than a literal
+- Colors set by script or in `<canvas>`, and inline `<svg>` color attributes (`fill="#f00"`)
 
 ##### Empty states
 ```bash
@@ -598,6 +556,7 @@ After the crawl, produce a structured findings report. Group by severity:
 **Pages crawled:** [list]
 **Breakpoints tested:** [list per page]
 **Focus areas:** [list per page]
+**Color check coverage:** [per page: sheets read / skipped, rules, shadowRoots, from the color check's `scanned` counts; empty findings do not mean no hardcoded colors]
 
 ## Critical (broken functionality / data errors)
 - [page] @ [breakpoint]: [description] — screenshot: [filename]
