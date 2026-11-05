@@ -417,39 +417,36 @@ Finding nothing is a real result. Say so in the report, skip the "Should use exi
 ```bash
 cat > /tmp/ds-alignment.js << 'JSEOF'
 var patterns = [];
-// Buttons
-document.querySelectorAll("button, [role=button], a.button").forEach(function(el) {
+var counts = [];
+var cap = 6;
+
+function record(type, selector, formatFn) {
+  var els = document.querySelectorAll(selector);
+  if (!els.length) return;
+  for (var i = 0; i < els.length && i < cap; i++) {
+    patterns.push(formatFn ? formatFn(els[i]) : type + ": " + (els[i].className || "").toString().substring(0, 80));
+  }
+  counts.push(type + " " + els.length + (els.length > cap ? " (showing " + cap + ")" : ""));
+}
+
+record("BUTTON", "button, [role=button], a.button", function(el) {
   var cls = (el.className || "").toString();
-  patterns.push("BUTTON: " + cls.substring(0, 80) + " | text: " + el.textContent.trim().substring(0, 30));
+  return "BUTTON: " + cls.substring(0, 80) + " | text: " + el.textContent.trim().substring(0, 30);
 });
-// Cards/containers
-document.querySelectorAll("[class*=card], [class*=Card]").forEach(function(el) {
-  patterns.push("CARD: " + (el.className || "").toString().substring(0, 80));
-});
-// Empty states
-document.querySelectorAll("[class*=empty], [class*=Empty], [class*=not-found]").forEach(function(el) {
-  patterns.push("EMPTY: " + (el.className || "").toString().substring(0, 80));
-});
-// Forms
-document.querySelectorAll("form, [class*=form], [class*=Form]").forEach(function(el) {
-  patterns.push("FORM: " + (el.className || "").toString().substring(0, 80));
-});
-// Badges/tags
-document.querySelectorAll("[class*=badge], [class*=Badge], [class*=tag]").forEach(function(el) {
-  patterns.push("BADGE: " + (el.className || "").toString().substring(0, 80));
-});
-// Tables
-document.querySelectorAll("table, [class*=table], [class*=Table]").forEach(function(el) {
-  patterns.push("TABLE: " + (el.className || "").toString().substring(0, 80));
-});
-// Navigation
-document.querySelectorAll("nav, [class*=nav], [class*=Nav], [role=navigation]").forEach(function(el) {
-  patterns.push("NAV: " + (el.className || "").toString().substring(0, 80));
-});
-patterns.slice(0, 30)
+record("CARD", "[class*=card], [class*=Card]");
+record("EMPTY", "[class*=empty], [class*=Empty], [class*=not-found]");
+record("FORM", "form, [class*=form], [class*=Form]");
+record("BADGE", "[class*=badge], [class*=Badge], [class*=tag]");
+record("TABLE", "table, [class*=table], [class*=Table]");
+record("NAV", "nav, [class*=nav], [class*=Nav], [role=navigation]");
+
+if (counts.length) patterns.push("COUNTS: " + counts.join(", "));
+patterns
 JSEOF
 bdg dom eval "$(cat /tmp/ds-alignment.js)"
 ```
+
+The inventory caps each pattern type at 6 entries so every category present on the page shows up; a `COUNTS:` entry with `(showing 6)` means more exist.
 
 **Cross-reference against the canon you found.** A project may have only some of these, and the paths and names are examples:
 - Primitives — the folder or package the app gets its buttons and inputs from (e.g., `src/components/ui/` with shadcn/Radix, or a dependency like MUI)
