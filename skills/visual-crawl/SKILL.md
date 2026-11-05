@@ -131,7 +131,7 @@ Always include at least one mobile, one tablet, and one desktop. Always include 
 **C) Audit focus** — pick 2-3 focus areas per page from this rotating list:
 - **Layout integrity** — overflow, clipping, overlap, whitespace collapse
 - **Typography** — font-family matches tokens, sizes consistent, no orphan lines
-- **Color tokens** — hardcoded colors vs CSS variables, contrast issues
+- **Color tokens** — hardcoded colors vs CSS variables (inline styles, stylesheet rules, and arbitrary-value utility classes), contrast issues
 - **Empty states** — what happens with no data / null values
 - **Interactive elements** — buttons clickable, form inputs work
 - **Interactive states** — hover/focus/active legibility, not just clickability (see the dedicated check below — this is easy to skip and catches real bugs)
@@ -266,17 +266,110 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 
 ##### Color token check
 ```bash
-# Find inline color/background styles (potential hardcoded values)
+# Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
-Array.from(document.querySelectorAll("[style]")).filter(function(el) {
-  return /color|background/.test(el.getAttribute("style"));
-}).map(function(el) {
-  var cls = (el.className || "").toString().split(" ").slice(0,2).join(".");
-  return el.tagName + "." + cls + " -> " + el.getAttribute("style").substring(0, 80);
-}).slice(0, 20)
+(function() {
+  var colorRe = /#(?:[0-9a-fA-F]{3,8})\b|rgba?\(|hsla?\(/i;
+  var colorProps = ["color", "background", "background-color", "border-color", "outline-color", "fill", "stroke"];
+
+  var inlineEls = document.querySelectorAll("[style]");
+  var inline = [];
+  for (var i = 0; i < inlineEls.length; i++) {
+    var el = inlineEls[i];
+    var styleAttr = el.getAttribute("style") || "";
+    if (colorRe.test(styleAttr)) {
+      if (inline.length < 20) {
+        var cls = (el.className || "").toString().split(" ").slice(0, 2).join(".");
+        inline.push(el.tagName + "." + cls + " -> " + styleAttr.substring(0, 80));
+      }
+    }
+  }
+
+  var sheets = document.styleSheets;
+  var sheetsRead = 0;
+  var skippedSheets = 0;
+  var rulesCount = 0;
+  var stylesheet = [];
+
+  function checkRules(ruleList) {
+    for (var r = 0; r < ruleList.length; r++) {
+      var rule = ruleList[r];
+      rulesCount++;
+      if (rule.style && rule.selectorText) {
+        if (stylesheet.length < 20) {
+          for (var p = 0; p < colorProps.length; p++) {
+            var prop = colorProps[p];
+            var val = rule.style.getPropertyValue(prop);
+            if (val && colorRe.test(val) && val.indexOf("var(") === -1) {
+              stylesheet.push(rule.selectorText + " { " + prop + ": " + val + " }");
+              if (stylesheet.length >= 20) {
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (rule.cssRules) {
+        try {
+          checkRules(rule.cssRules);
+        } catch (e) {}
+      }
+    }
+  }
+
+  for (var s = 0; s < sheets.length; s++) {
+    var rules;
+    try {
+      rules = sheets[s].cssRules;
+    } catch (e) {
+      skippedSheets++;
+      continue;
+    }
+    if (!rules) {
+      skippedSheets++;
+      continue;
+    }
+    sheetsRead++;
+    try {
+      checkRules(rules);
+    } catch (e) {}
+  }
+
+  var utilityEls = document.querySelectorAll("[class]");
+  var utilityRe = /\[(#|rgb|hsl)[^\]]*\]/;
+  var utility = [];
+  for (var u = 0; u < utilityEls.length && utility.length < 20; u++) {
+    var uEl = utilityEls[u];
+    var classAttr = (uEl.getAttribute("class") || "").toString();
+    if (utilityRe.test(classAttr)) {
+      var parts = classAttr.split(/\s+/);
+      for (var c = 0; c < parts.length; c++) {
+        if (utilityRe.test(parts[c])) {
+          if (utility.length < 20) {
+            utility.push(uEl.tagName + "." + parts[c]);
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    inline: inline,
+    stylesheet: stylesheet,
+    utility: utility,
+    scanned: {
+      inlineEls: inlineEls.length,
+      sheets: sheetsRead,
+      skippedSheets: skippedSheets,
+      rules: rulesCount
+    }
+  };
+})()
 JSEOF
 bdg dom eval "$(cat /tmp/color-check.js)"
 ```
+
+This check covers literal colors in inline styles, accessible stylesheet rules, and arbitrary utility classes like `bg-[#ff0000]`. It can't see cross-origin stylesheets (counted in `skippedSheets`), CSS-in-JS injected later, or non-arbitrary utility classes like `text-red-500` which map to a palette rather than a literal. Empty findings with `skippedSheets > 0` or `rules = 0` do not mean the page is clean.
 
 ##### Empty states
 ```bash
