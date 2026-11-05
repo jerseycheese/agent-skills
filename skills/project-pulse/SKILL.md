@@ -140,8 +140,17 @@ A wrap-up needs the chat's own context, so each session runs `wrap-it-up` itself
    doesn't name one, use its default for unnamed work, else a mid-tier model. Escalating isn't
    worth it here. Where the agent can't switch another session's model, leave it as is.
 3. Ask the session to run `wrap-it-up` and report. Work through a few at a time.
-4. Archive the session once its report arrives and shows nothing left open. Check its worktree first.
-5. If a wrap-up fails, asks a question, or wants to commit or push, don't archive that session. List
-   it in the reply with what it needs, and link it so the user can answer there.
+4. Sort what the wrap-up finds. A session gets archived only once its loose ends live somewhere that
+   outlasts it:
+   - **Small context update** (status doc, memory): the wrap-up writes it. Archive.
+   - **Real follow-up work**: the wrap-up files one issue per piece of work someone would actually
+     do, using the repo's template, or adds a task where the project has no issue tracker. It links
+     an existing item rather than filing a duplicate, and leaves smaller things in its report. Archive.
+   - **Uncommitted or unpushed work, or a decision only the user can make**: hold the session.
+   - **A failed wrap-up, or one that asks a question**: hold the session.
+5. Check the worktree before archiving, and hold the session if the worktree has work nothing else
+   records.
+6. End with one summary: sessions archived, new items with links, and sessions held with what each
+   needs and a link to it.
 
 Where the agent can't message or archive sessions, say so and leave them for the user.
