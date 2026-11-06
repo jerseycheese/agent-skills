@@ -139,7 +139,9 @@ A wrap-up needs the chat's own context, so each session runs `wrap-it-up` itself
 2. Set the session's model to the one the user's routing table names for close-out work. If it
    doesn't name one, use its default for unnamed work, else a mid-tier model. Escalating isn't
    worth it here. Where the agent can't switch another session's model, leave it as is.
-3. Ask the session to run `wrap-it-up` and report. Work through a few at a time.
+3. Ask the session to run `wrap-it-up` without its post-merge step, and to report any PR that
+   merged during the chat instead. Approval to archive doesn't cover deleting branches or worktrees
+   or closing issues. Work through a few at a time.
 4. Sort what the wrap-up finds. A session gets archived only once its loose ends live somewhere that
    outlasts it:
    - **Small context update** (status doc, memory): the wrap-up writes it. Archive.
@@ -151,6 +153,7 @@ A wrap-up needs the chat's own context, so each session runs `wrap-it-up` itself
 5. Check the worktree before archiving, and hold the session if the worktree has work nothing else
    records.
 6. End with one summary: sessions archived, new items with links, and sessions held with what each
-   needs and a link to it.
+   needs and a link to it. List the merged PRs the wrap-ups reported and ask once whether to run
+   `post-merge` for them.
 
 Where the agent can't message or archive sessions, say so and leave them for the user.
