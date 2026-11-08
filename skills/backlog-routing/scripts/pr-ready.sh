@@ -82,7 +82,7 @@ def review:
   ( [.comments.nodes[] | select(codex and (.body | contains("'"$SUMMARY_MARKER"'")))] | last // null
     | if . == null then "summary\tnone\t-"
       else (.body | split("\n") | map(select(startswith("| ") and contains("**")))) as $rows
-        | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" elif ($rows | any(contains("**Failed**"))) then "failed" else "running" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
+        | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" elif ($rows | any((contains("**Completed**") or contains("**Failed**")) | not)) then "running" else "failed" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
       end ),
   ( [.comments.nodes[] | select(.author.login == $me) | review] as $revs
     | ([$revs[] | select(.sha == $head)] | last) as $cur

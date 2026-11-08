@@ -101,6 +101,9 @@ check "codex still running" 1 "| **Review** | **Running** \`${HEAD:0:7}\` |"
 COMMENTS=$(review_comment me 0)
 check "codex failed, orchestrator comment passes" 0 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
 check "codex failed, nothing else" 1 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
+# One row still running blocks even when another failed.
+COMMENTS=$(review_comment me 0)
+check "codex failed and running, orchestrator comment" 1 "$(printf '| **Review** | **Failed** \`%s\` |\n| **Security** | **Running** \`%s\` |' "${HEAD:0:7}" "${HEAD:0:7}")"
 
 RUNS='[{"id": 1, "check_suite": {"id": 1}, "name": "lint", "status": "completed", "conclusion": "failure"}]'
 check "failed check run" 1 "$CODEX_OK"
