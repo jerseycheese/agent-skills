@@ -97,6 +97,10 @@ check "codex completed, no sha" 1 "| **Review** | **Completed** |"
 # A running review blocks even when the orchestrator comment passes.
 COMMENTS=$(review_comment me 0)
 check "codex still running" 1 "| **Review** | **Running** \`${HEAD:0:7}\` |"
+# A failed Codex run (usage limit) counts as no Codex review, so the orchestrator comment passes.
+COMMENTS=$(review_comment me 0)
+check "codex failed, orchestrator comment passes" 0 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
+check "codex failed, nothing else" 1 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
 
 RUNS='[{"id": 1, "check_suite": {"id": 1}, "name": "lint", "status": "completed", "conclusion": "failure"}]'
 check "failed check run" 1 "$CODEX_OK"

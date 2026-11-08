@@ -20,7 +20,8 @@
 #     when a PR opens, is marked ready, or is asked to (@codex review), not on every push, so a
 #     summary on an older sha is stale and doesn't pass, and neither does one that names no sha.
 #     A summary that's posted but not Completed means the review is still running, and that
-#     blocks even if the other source passes.
+#     blocks even if the other source passes. One marked Failed (a usage limit or a Codex error)
+#     doesn't block: it counts as no Codex review, so the other source can pass.
 #   - Orchestrator comment: the other-family review is a comment the orchestrator posts with
 #     post-review.sh, from the account gh is signed in as. The newest such comment naming the
 #     head sha decides: it passes at "Open findings: 0". The comment has to start with the
@@ -81,7 +82,7 @@ def review:
   ( [.comments.nodes[] | select(codex and (.body | contains("'"$SUMMARY_MARKER"'")))] | last // null
     | if . == null then "summary\tnone\t-"
       else (.body | split("\n") | map(select(startswith("| ") and contains("**")))) as $rows
-        | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" else "running" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
+        | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" elif ($rows | any(contains("**Failed**"))) then "failed" else "running" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
       end ),
   ( [.comments.nodes[] | select(.author.login == $me) | review] as $revs
     | ([$revs[] | select(.sha == $head)] | last) as $cur
@@ -208,6 +209,7 @@ case "$summary" in
     esac
     ;;
   running) review_blocked="codex review still running" ;;
+  failed) codex_why="codex review failed on ${summary_sha} (usage limit or error)" ;;
 esac
 
 comment_ok=0
