@@ -50,6 +50,7 @@ reset_knobs() {
   COMMENTS='[]' # extra comment nodes
   THREADS='[]'  # review thread nodes
   RUNS="[$PASS_RUN]"
+  BOT_ARGS="--bot codex" # the review bot the caller opts into; empty for none
 }
 reset_knobs
 
@@ -79,7 +80,8 @@ fails=0
 # check <name> <expected exit> <codex summary row>
 check() {
   write_pr "$3"
-  out=$(PATH="$tmp/bin:$PATH" FAKE_GH_DIR="$tmp" bash "$SCRIPT" 7 2>&1)
+  # shellcheck disable=SC2086 # BOT_ARGS is zero or two words on purpose
+  out=$(PATH="$tmp/bin:$PATH" FAKE_GH_DIR="$tmp" bash "$SCRIPT" $BOT_ARGS 7 2>&1)
   got=$?
   if [ "$got" -eq "$2" ]; then
     echo "ok: $1 (exit $got)"
@@ -126,5 +128,19 @@ COMMENTS=$(review_comment someone-else 0)
 check "orchestrator comment from another login" 1 ""
 COMMENTS=$(review_comment me 2)
 check "orchestrator comment with open findings" 1 "$CODEX_OK"
+
+# No --bot: the gate ignores bot reviews and threads, and passes on the orchestrator comment alone.
+BOT_ARGS=""
+check "no bot: a codex summary doesn't count" 1 "$CODEX_OK"
+BOT_ARGS=""
+COMMENTS=$(review_comment me 0)
+check "no bot: orchestrator comment passes" 0 ""
+BOT_ARGS=""
+COMMENTS=$(review_comment me 0)
+THREADS='[{"id": "T1", "isResolved": false, "isOutdated": false, "path": "a.sh", "line": 3, "originalLine": 3,
+  "comments": {"nodes": [{"body": "fix this", "author": {"__typename": "Bot", "login": "chatgpt-codex-connector"}}]}}]'
+check "no bot: a codex thread doesn't count" 0 "$CODEX_OK"
+BOT_ARGS="--bot somebot"
+check "unknown bot" 2 "$CODEX_OK"
 
 [ "$fails" -eq 0 ] || exit 1

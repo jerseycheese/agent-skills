@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pr-ready.sh <pr-number>
+# pr-ready.sh [--bot <name>] <pr-number>
 #
 # One call that answers "is this PR ready to merge?" for the review gate. Prints at most 6 lines
 # and exits 0 only when every line passes. Exit 1 means not ready, exit 2 means it couldn't tell
@@ -13,9 +13,12 @@
 #   statuses. A re-run stays in its workflow run's check suite, so it replaces the run it re-ran;
 #   two workflows with a job of the same name are separate suites, so both count. No checks
 #   reported yet is pending, not a pass or a failure.
-# - Review: passes on either of two sources. Which reviewer a repo uses, and in what order, is the
-#   adapter's call, not this script's.
-#   - Codex: the summary marker comment exists, every row of its table says Completed, and the sha
+# - Review: passes on the orchestrator comment below, or on a review bot the caller opts into with
+#   --bot (the repo's adapter says whether it runs one). Without --bot, bot comments and threads
+#   don't count, so the gate works the same whatever bot a repo has installed. Which reviewer a
+#   repo uses, and in what order, is the adapter's call, not this script's.
+#   - Bot (--bot codex, the Codex GitHub connector, the one bundled profile; another bot needs its
+#     own case below): the summary marker comment exists, every row of its table says Completed, and the sha
 #     it names is the head (prefix match, since the table can carry a short sha). The bot reviews
 #     when a PR opens, is marked ready, or is asked to (@codex review), not on every push, so a
 #     summary on an older sha is stale and doesn't pass, and neither does one that names no sha.
@@ -29,7 +32,7 @@
 #     post-review.sh writes. A comment that names an older sha is stale (a push landed after the
 #     review). Comments from anyone else are ignored, so nobody else can forge a pass.
 #     A comment on the head with open findings blocks even when the other source passes.
-# - Findings: every inline thread Codex started that is still unresolved, whichever source passed.
+# - Findings: every inline thread the --bot started that is still unresolved, whichever source passed.
 #   An outdated one (a push changed the commented lines) is flagged, not dropped: GitHub marks a
 #   thread outdated whether or not the push fixed it, and the bot doesn't re-review, so a thread
 #   only clears when someone verifies the fix (or that the finding isn't real) and resolves it.
@@ -40,8 +43,6 @@
 set -u
 set -o pipefail
 
-CODEX_LOGIN="chatgpt-codex-connector"
-SUMMARY_MARKER="<!-- codex-pull-request-review-summary -->"
 FINDING_CHARS=120
 
 die() {
@@ -49,9 +50,22 @@ die() {
   exit 2
 }
 
+bot=""
+if [ "${1:-}" = "--bot" ]; then
+  bot="${2:-}"
+  [ -n "$bot" ] || die "usage: pr-ready.sh [--bot <name>] <pr-number>"
+  shift 2
+fi
+# Bot profiles: the account the bot posts as, and the marker its summary comment carries.
+case "$bot" in
+  '') BOT_LOGIN="" SUMMARY_MARKER="" ;;
+  codex) BOT_LOGIN="chatgpt-codex-connector" SUMMARY_MARKER="<!-- codex-pull-request-review-summary -->" ;;
+  *) die "unknown review bot: $bot (bundled: codex)" ;;
+esac
+
 pr="${1:-}"
 case "$pr" in
-  '' | *[!0-9]*) die "usage: pr-ready.sh <pr-number>" ;;
+  '' | *[!0-9]*) die "usage: pr-ready.sh [--bot <name>] <pr-number>" ;;
 esac
 
 repo=$(gh api 'repos/{owner}/{repo}' --jq .full_name) || die "can't resolve owner/repo"
@@ -60,7 +74,7 @@ name="${repo#*/}"
 
 # gojq (inside gh --jq) prints strings raw; each output line is TAB-separated, with no empty fields.
 pr_jq='
-def codex: .author.__typename == "Bot" and .author.login == "'"$CODEX_LOGIN"'";
+def bot: "'"$BOT_LOGIN"'" != "" and .author.__typename == "Bot" and .author.login == "'"$BOT_LOGIN"'";
 def line($re): map(select(test($re))) | .[0];
 def review:
   (.body | split("\n")) as $l
@@ -79,7 +93,7 @@ def review:
   "state\t\(.state)",
   "draft\t\(.isDraft)",
   "merge\t\(.mergeable)\t\(.mergeStateStatus)",
-  ( [.comments.nodes[] | select(codex and (.body | contains("'"$SUMMARY_MARKER"'")))] | last // null
+  ( [.comments.nodes[] | select(bot and (.body | contains("'"$SUMMARY_MARKER"'")))] | last // null
     | if . == null then "summary\tnone\t-"
       else (.body | split("\n") | map(select(startswith("| ") and contains("**")))) as $rows
         | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" elif ($rows | any((contains("**Completed**") or contains("**Failed**")) | not)) then "running" else "failed" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
@@ -91,7 +105,7 @@ def review:
       else "review\tnone\t-\t0\t-" end ),
   "threads\t\(.reviewThreads.pageInfo.hasNextPage)",
   ( .reviewThreads.nodes[]
-    | select((.isResolved | not) and (.comments.nodes[0] | codex))
+    | select((.isResolved | not) and (.comments.nodes[0] | bot))
     | .comments.nodes[0].body as $b
     | "finding\t\(.path):\(.line // .originalLine)\t\((($b | capture("!\\[(?<p>P[0-9]+) Badge\\]") | .p) // "P?"))\t\(.id)\t\(if .isOutdated then "(outdated) " else "" end)\($b | split("\n")[0] | gsub("<[^>]*>|!\\[[^\\]]*\\]\\([^)]*\\)|\\*\\*"; "") | gsub("^\\s+|\\s+$"; "") | .[0:'"$FINDING_CHARS"'])" )
 '
@@ -195,21 +209,21 @@ else
   draft_out="no"
 fi
 
-codex_ok=0 codex_why=""
+bot_ok=0 bot_why=""
 case "$summary" in
   complete)
     case "$summary_sha" in
-      -) codex_why="codex summary names no sha" ;;
+      -) bot_why="$bot summary names no sha" ;;
       *)
         case "$head_sha" in
-          "$summary_sha"*) codex_ok=1 ;;
-          *) codex_why="stale (codex reviewed ${summary_sha}, head is ${head_sha:0:10})" ;;
+          "$summary_sha"*) bot_ok=1 ;;
+          *) bot_why="stale ($bot reviewed ${summary_sha}, head is ${head_sha:0:10})" ;;
         esac
         ;;
     esac
     ;;
-  running) review_blocked="codex review still running" ;;
-  failed) codex_why="codex review failed on ${summary_sha} (usage limit or error)" ;;
+  running) review_blocked="$bot review still running" ;;
+  failed) bot_why="$bot review failed on ${summary_sha} (usage limit or error)" ;;
 esac
 
 comment_ok=0
@@ -228,12 +242,12 @@ esac
 if [ -n "$review_blocked" ]; then
   review_out="$review_blocked"
   ready=0
-elif [ "$codex_ok" -eq 1 ]; then
-  review_out="codex summary completed on ${summary_sha}"
+elif [ "$bot_ok" -eq 1 ]; then
+  review_out="$bot summary completed on ${summary_sha}"
 elif [ "$comment_ok" -eq 1 ]; then
   review_out="comment on ${rev_sha} by ${rev_who}, 0 open"
 else
-  review_out="${comment_why:-${codex_why:-not posted}}"
+  review_out="${comment_why:-${bot_why:-not posted}}"
   ready=0
 fi
 

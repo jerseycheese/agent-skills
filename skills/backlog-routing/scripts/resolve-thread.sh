@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# resolve-thread.sh <thread-id> <commit-sha>
+# resolve-thread.sh --bot <name> <thread-id> <commit-sha>
 #
-# Clears one verified Codex review thread: replies on it pointing at the commit, then resolves it.
+# Clears one verified review-bot thread: replies on it pointing at the commit, then resolves it.
+# --bot names the bot whose threads it may touch, the same profile pr-ready.sh takes (bundled:
+# codex, the Codex GitHub connector).
 # Use it after checking the finding yourself. For a finding that isn't real, pass the head sha you
 # verified against. The thread id is on the `findings` line of pr-ready.sh. Reviews the
 # orchestrator posts as a comment have no thread; post-review.sh covers those.
@@ -9,7 +11,7 @@
 # Narrow on purpose, so an agent can be allowed to run it without being allowed to run arbitrary
 # `gh api graphql`. It refuses unless all of these hold:
 # - the thread id is a review thread in this repo, on an open PR
-# - the thread was started by the Codex bot (exact login and the Bot account type)
+# - the thread was started by that bot (exact login and the Bot account type)
 # - the commit exists in this repo
 # An already-resolved thread is a no-op that exits 0.
 #
@@ -18,9 +20,6 @@
 
 set -u
 set -o pipefail
-
-# Keep in sync with pr-ready.sh.
-CODEX_LOGIN="chatgpt-codex-connector"
 
 die() {
   echo "resolve-thread: $*" >&2
@@ -32,9 +31,16 @@ refuse() {
   exit 1
 }
 
-[ "$#" -eq 2 ] || die "usage: resolve-thread.sh <thread-id> <commit-sha>"
-thread="$1"
-sha="$2"
+usage="usage: resolve-thread.sh --bot <name> <thread-id> <commit-sha>"
+[ "$#" -eq 4 ] && [ "$1" = "--bot" ] || die "$usage"
+bot="$2"
+thread="$3"
+sha="$4"
+# Bot profiles: keep in sync with pr-ready.sh.
+case "$bot" in
+  codex) BOT_LOGIN="chatgpt-codex-connector" ;;
+  *) die "unknown review bot: $bot (bundled: codex)" ;;
+esac
 [[ "$thread" =~ ^PRRT_[A-Za-z0-9_-]+$ ]] || die "not a review thread id: $thread"
 [[ "$sha" =~ ^[0-9a-f]{7,40}$ ]] || die "not a commit sha: $sha"
 
@@ -76,7 +82,7 @@ done <<<"$thread_lines"
 
 [ "$node_type" = "PullRequestReviewThread" ] || refuse "$thread is not a review thread"
 [ "$thread_repo" = "$repo" ] || refuse "thread belongs to $thread_repo, not $repo"
-[ "$author_type/$author_login" = "Bot/$CODEX_LOGIN" ] || refuse "thread wasn't started by $CODEX_LOGIN"
+[ "$author_type/$author_login" = "Bot/$BOT_LOGIN" ] || refuse "thread wasn't started by $BOT_LOGIN"
 [ "$pr_state" = "OPEN" ] || refuse "PR is $pr_state, not OPEN"
 
 if [ "$resolved" = "true" ]; then
