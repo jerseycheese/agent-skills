@@ -196,8 +196,9 @@ tier off or tighten what counts as light (path patterns, size limit). Escalation
 light reviewer flags anything beyond wording, or the diff turns out to touch code, the PR goes
 through the normal two-reviewer review. The light review records its verdict through
 `scripts/post-review.sh` like any orchestrator-posted review. `pr-ready.sh` can't tell a light
-review from a normal one, so post the light verdict as passing (0 open) only when the review
-clears with nothing beyond wording. On escalation, post no light verdict and run the normal review. The PR
+review from a normal one, so post the light review's wording findings with the real open count,
+the same as step 2's <open>. It passes only at 0 open. Only a finding beyond wording triggers
+escalation: post no light verdict and run the normal review. The PR
 can't pass before the normal review exists.
 
 1. Two reviewers from different model families where available (except on the light tier):
