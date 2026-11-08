@@ -50,6 +50,7 @@ reset_knobs() {
   COMMENTS='[]' # extra comment nodes
   THREADS='[]'  # review thread nodes
   RUNS="[$PASS_RUN]"
+  BOT_ARGS="--bot codex" # the review bot the caller opts into; empty for none
 }
 reset_knobs
 
@@ -79,7 +80,8 @@ fails=0
 # check <name> <expected exit> <codex summary row>
 check() {
   write_pr "$3"
-  out=$(PATH="$tmp/bin:$PATH" FAKE_GH_DIR="$tmp" bash "$SCRIPT" 7 2>&1)
+  # shellcheck disable=SC2086 # BOT_ARGS is zero or two words on purpose
+  out=$(PATH="$tmp/bin:$PATH" FAKE_GH_DIR="$tmp" bash "$SCRIPT" $BOT_ARGS 7 2>&1)
   got=$?
   if [ "$got" -eq "$2" ]; then
     echo "ok: $1 (exit $got)"
@@ -97,6 +99,13 @@ check "codex completed, no sha" 1 "| **Review** | **Completed** |"
 # A running review blocks even when the orchestrator comment passes.
 COMMENTS=$(review_comment me 0)
 check "codex still running" 1 "| **Review** | **Running** \`${HEAD:0:7}\` |"
+# A failed Codex run (usage limit) counts as no Codex review, so the orchestrator comment passes.
+COMMENTS=$(review_comment me 0)
+check "codex failed, orchestrator comment passes" 0 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
+check "codex failed, nothing else" 1 "| **Review** | **Failed** \`${HEAD:0:7}\` |"
+# One row still running blocks even when another failed.
+COMMENTS=$(review_comment me 0)
+check "codex failed and running, orchestrator comment" 1 "$(printf '| **Review** | **Failed** \`%s\` |\n| **Security** | **Running** \`%s\` |' "${HEAD:0:7}" "${HEAD:0:7}")"
 
 RUNS='[{"id": 1, "check_suite": {"id": 1}, "name": "lint", "status": "completed", "conclusion": "failure"}]'
 check "failed check run" 1 "$CODEX_OK"
@@ -119,5 +128,19 @@ COMMENTS=$(review_comment someone-else 0)
 check "orchestrator comment from another login" 1 ""
 COMMENTS=$(review_comment me 2)
 check "orchestrator comment with open findings" 1 "$CODEX_OK"
+
+# No --bot: the gate ignores bot reviews and threads, and passes on the orchestrator comment alone.
+BOT_ARGS=""
+check "no bot: a codex summary doesn't count" 1 "$CODEX_OK"
+BOT_ARGS=""
+COMMENTS=$(review_comment me 0)
+check "no bot: orchestrator comment passes" 0 ""
+BOT_ARGS=""
+COMMENTS=$(review_comment me 0)
+THREADS='[{"id": "T1", "isResolved": false, "isOutdated": false, "path": "a.sh", "line": 3, "originalLine": 3,
+  "comments": {"nodes": [{"body": "fix this", "author": {"__typename": "Bot", "login": "chatgpt-codex-connector"}}]}}]'
+check "no bot: a codex thread doesn't count" 0 "$CODEX_OK"
+BOT_ARGS="--bot somebot"
+check "unknown bot" 2 "$CODEX_OK"
 
 [ "$fails" -eq 0 ] || exit 1

@@ -49,7 +49,8 @@ The adapter supplies:
   human-only: no agent merges, approves, or enables auto-merge. An adapter can give merging to the
   orchestrator for the PRs it names (say, everything except drafts and PRs with a Local check),
   and lists the conditions to show first (gates, CI, a clean review gate). It also names the
-  second reviewer (a bot, or a seat the orchestrator drives) and how long to wait for a bot.
+  second reviewer (a bot, or a seat the orchestrator drives), how long to wait for a bot, and the
+  `--bot` profile the review scripts take for it (none means bot reviews don't count).
 - **Milestone and release convention**: how milestones are named, what a release PR contains, which
   release steps belong to the human.
 - **Label names** for type, priority, size, model tier, and the two this skill needs (`needs-local`,
@@ -187,8 +188,8 @@ Runs on each batch PR once CI is green on its head.
 1. Two reviewers from different model families where available:
    - the seat `route` picks for the code review phase, which must not be the family that wrote
      the batch
-   - a second reviewer the adapter names. It can be a bot the repo already runs (the Codex bot,
-     say), or a seat the orchestrator drives, in which case nothing posts on its own: the
+   - a second reviewer the adapter names. It can be a review bot the repo already runs, or a
+     seat the orchestrator drives, in which case nothing posts on its own: the
      orchestrator sends it a read-only review brief naming the PR and head sha, and the reviewer
      writes its findings somewhere the orchestrator can read. The adapter also says which to use
      when more than one is available, and what to do when one can't run.
@@ -209,19 +210,22 @@ Runs on each batch PR once CI is green on its head.
      newest comment naming the head wins. A finding you dismissed as not real stays out of the
      comment.
    - **Bot review threads.** Clear each thread you've verified, fixed or not real, with
-     `scripts/resolve-thread.sh <thread-id> <sha>`. It replies on the thread pointing at the
-     commit (the fix, or the head you verified against when the finding isn't real) and resolves
-     it. It refuses any thread the Codex bot didn't start or that isn't on an open PR in this
+     `scripts/resolve-thread.sh --bot <name> <thread-id> <sha>`. It replies on the thread pointing
+     at the commit (the fix, or the head you verified against when the finding isn't real) and
+     resolves it. It refuses any thread that bot didn't start or that isn't on an open PR in this
      repo. A finding stays open until someone does. A bot that posts findings after you stopped
      relying on it is still answered this way.
 
-   `scripts/pr-ready.sh <pr>` does the mechanical part. It prints 6 lines (head sha, CI, draft,
-   the review, unresolved bot findings with thread ids and outdated ones flagged, mergeable state)
-   and exits 0 only when all of them pass. The review line passes on either source: the Codex
-   bot's summary with every row Completed on the head sha, or the newest orchestrator-posted
-   comment naming the head with 0 open findings, from the account `gh` runs as. A posted summary
-   that isn't Completed yet blocks, since that review is still running. A stale summary or comment
-   (a push landed after it; the bot doesn't re-review on push) or no review at all fails.
+   `scripts/pr-ready.sh [--bot <name>] <pr>` does the mechanical part. It prints 6 lines (head
+   sha, CI, draft, the review, unresolved bot findings with thread ids and outdated ones flagged,
+   mergeable state) and exits 0 only when all of them pass. The review line passes on the newest
+   orchestrator-posted comment naming the head with 0 open findings, from the account `gh` runs
+   as. A review bot counts only when the adapter opts into it with `--bot` (bundled profile:
+   `codex`, the Codex GitHub connector; another bot needs a profile added to both scripts). Then
+   its summary with every row Completed on the head sha also passes, a summary still running
+   blocks, a failed one (a usage limit, say) counts as no bot review, and its unresolved threads
+   are findings. A stale summary or comment (a push landed after it; bots don't re-review on
+   push) or no review at all fails.
 3. When the PR is green with no unanswered verified findings, check the merge policy.
    - **The orchestrator merges.** The policy names this kind of PR. Show each condition it lists
      with a tool result, merge pinned to the head you checked (`gh pr merge --match-head-commit
