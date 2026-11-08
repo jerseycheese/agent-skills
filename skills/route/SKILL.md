@@ -42,7 +42,7 @@ behind it and fall back to the table's first choice for that row.
 1. Read the routing table and its rules from `$AI_ROUTING_TABLE`.
 2. Get current burn: `bash "$AI_BUDGET_DIR/read-burn.sh" --human`.
 3. Classify the task into one phase from the table. Small prose-only PRs take the light review
-   phase, from the table's Light review row. If it spans phases, pick the phase of the
+   phase, from the table's Light review row. A table with no such row uses the Code review row. If it spans phases, pick the phase of the
    immediate next step rather than the whole job.
 4. Apply the ladder: name the row's first choice. Escalate only in two cases:
    - the first choice's seat is at or past 90 percent used, in the window the work will actually
