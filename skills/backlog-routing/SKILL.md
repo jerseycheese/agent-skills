@@ -51,6 +51,8 @@ The adapter supplies:
   and lists the conditions to show first (gates, CI, a clean review gate). It also names the
   second reviewer (a bot, or a seat the orchestrator drives), how long to wait for a bot, and the
   `--bot` profile the review scripts take for it (none means bot reviews don't count).
+- **Light review tier**: on or off (default on), and any narrowing of what counts as light (path
+  patterns, size limit).
 - **Milestone and release convention**: how milestones are named, what a release PR contains, which
   release steps belong to the human.
 - **Label names** for type, priority, size, model tier, and the two this skill needs (`needs-local`,
@@ -185,7 +187,16 @@ Before launching, show the `route` block for each batch in the wave and wait for
 
 Runs on each batch PR once CI is green on its head.
 
-1. Two reviewers from different model families where available:
+**Light tier.** A diff that touches only prose (Markdown, plain text, docs folders, license
+files; not comment-only edits inside code files, which stay on the normal path) and stays under the
+adapter's size limit is light. Everything else keeps the normal path. A light PR gets one review
+from the seat `route` picks for the light review phase, instead of two. The adapter can turn the
+tier off or tighten what counts as light (path patterns, size limit). Escalation is one-way: if the
+light reviewer flags anything beyond wording, or the diff turns out to touch code, the PR goes
+through the normal two-reviewer review. The light review records its verdict through
+`scripts/post-review.sh` like any orchestrator-posted review.
+
+1. Two reviewers from different model families where available (except on the light tier):
    - the seat `route` picks for the code review phase, which must not be the family that wrote
      the batch
    - a second reviewer the adapter names. It can be a review bot the repo already runs, or a
@@ -283,6 +294,7 @@ table here would drift from yours. So for each batch, pass `route` the phase and
 | a wave of independent batches | simple parallel dispatch |
 | batches that depend on each other, or need re-planning mid-run | complex orchestration |
 | review gate | code review |
+| review gate (light-tier PR) | light review |
 | a batch whose CI stays red | root-cause debugging |
 | `close-out`, `release`, tracker upkeep | anything unnamed |
 
