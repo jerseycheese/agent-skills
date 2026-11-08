@@ -198,9 +198,12 @@ light reviewer flags anything beyond wording, or the diff turns out to touch cod
 through the normal two-reviewer review. The light review records its verdict through
 `scripts/post-review.sh` like any orchestrator-posted review. `pr-ready.sh` can't tell a light
 review from a normal one, so post the light review's wording findings with the real open count,
-the same as step 2's <open>. It passes only at 0 open. Both escalation triggers (a finding
-beyond wording, or the diff touching code) post no light verdict and run the normal review. The PR
-can't pass before the normal review exists.
+the same as step 2's <open>. It passes only at 0 open. On either escalation trigger (a finding
+beyond wording, or the diff touching code), post the light reviewer's finding (or "diff touches
+code") through `scripts/post-review.sh` with the real open count, at least 1, then run the
+normal review. That open comment holds the PR even if a review bot's summary has completed, until
+the normal review posts its own verdict on the head. The PR can't pass before the normal review
+exists.
 
 1. Two reviewers from different model families where available (except on the light tier):
    - the seat `route` picks for the code review phase, which must not be the family that wrote
