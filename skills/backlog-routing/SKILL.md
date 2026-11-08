@@ -190,14 +190,14 @@ Runs on each batch PR once CI is green on its head.
 **Light tier.** A diff that touches only prose (Markdown, plain text, docs folders, license
 files; not comment-only edits inside code files, which stay on the normal path) and stays under the
 adapter's changed-line limit (50 lines unless the adapter sets another) is light. Everything else keeps the normal path. A light PR gets one review
-from the seat `route` picks for the light review phase, instead of two. The adapter can turn the
+from the seat `route` picks for the light review phase, instead of two. That seat must not be the
+family that wrote the batch. The adapter can turn the
 tier off or tighten what counts as light (path patterns, size limit). Escalation is one-way: if the
 light reviewer flags anything beyond wording, or the diff turns out to touch code, the PR goes
 through the normal two-reviewer review. The light review records its verdict through
 `scripts/post-review.sh` like any orchestrator-posted review. `pr-ready.sh` can't tell a light
 review from a normal one, so post the light verdict as passing (0 open) only when the review
-clears with nothing beyond wording. On escalation, post no passing light verdict: either post
-nothing and run the normal review, or post with the escalation counted as an open finding. The PR
+clears with nothing beyond wording. On escalation, post no light verdict and run the normal review. The PR
 can't pass before the normal review exists.
 
 1. Two reviewers from different model families where available (except on the light tier):

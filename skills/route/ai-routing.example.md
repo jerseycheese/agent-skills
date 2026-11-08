@@ -19,7 +19,7 @@ Read left to right within a row: first choice, then escalation.
 | Complex orchestration (agents depend on each other, mid-run re-planning) | <premium agentic seat> | none (rationed) |
 | Bulk implementation | <high-throughput seat> | <strong reasoning seat> |
 | Code review | <strong reasoning seat, different family from the author> | <premium seat> for security, concurrency, or architectural diffs |
-| Light review | <fast, cheap seat> | the Code review row |
+| Light review | <fast, cheap seat, different family from the author> | the Code review row |
 | Root-cause debugging | <strong reasoning seat> | <premium seat> |
 | Large-context reading and sweeps | <long-context seat> | none |
 | Anything unnamed, plus chat | <default workhorse> | none |
