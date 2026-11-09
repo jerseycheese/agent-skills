@@ -171,7 +171,7 @@ check "escalated, only light-tier verdict 0 open on head" 1 ""
 
 # Escalated PR: normal review on an older sha does not clear new head.
 COMMENTS=$(escalation_comment me "$(review_comment me 0 normal "$OLD")")
-check "escalated, normal review on older sha only" 1 ""
+check "escalated, normal review on older sha only" 1 "$CODEX_OK"
 
 # Not escalated: light-tier verdict clears.
 COMMENTS=$(review_comment me 0 light)
