@@ -189,7 +189,7 @@ Runs on each batch PR once CI is green on its head.
 
 **Light tier.** A diff that touches only prose (Markdown, plain text, docs folders, license
 files; not comment-only edits inside code files, which stay on the normal path) and stays under the
-adapter's changed-line limit (50 lines unless the adapter sets another) is light. Everything else
+changed-line limit (50 lines, or a lower limit the adapter sets) is light. Everything else
 keeps the normal path. A light PR gets one review from the seat `route` picks for the light review
 phase, instead of two. That seat must not be the family that wrote the batch; if the seat `route`
 returns (the light row or its Code review fallback) is that family, the PR goes through the normal
