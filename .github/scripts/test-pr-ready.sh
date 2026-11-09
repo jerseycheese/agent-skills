@@ -48,6 +48,7 @@ CODEX_OK="| **Review** | **Completed** \`${HEAD:0:7}\` |"
 reset_knobs() {
   DRAFT=false
   COMMENTS='[]' # extra comment nodes
+  MORE_COMMENTS=false # older comments cut off by the 100-comment window
   THREADS='[]'  # review thread nodes
   RUNS="[$PASS_RUN]"
   BOT_ARGS="--bot codex" # the review bot the caller opts into; empty for none
@@ -63,9 +64,9 @@ write_pr() {
       '[{body: $body, author: {__typename: "Bot", login: "chatgpt-codex-connector"}}]')
   fi
   jq -n --arg head "$HEAD" --argjson draft "$DRAFT" --argjson codex "$codex" \
-    --argjson extra "$COMMENTS" --argjson threads "$THREADS" '{data: {viewer: {login: "me"}, repository: {pullRequest: {
+    --argjson extra "$COMMENTS" --argjson more "$MORE_COMMENTS" --argjson threads "$THREADS" '{data: {viewer: {login: "me"}, repository: {pullRequest: {
     state: "OPEN", isDraft: $draft, mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", headRefOid: $head,
-    comments: {nodes: ($codex + $extra)},
+    comments: {pageInfo: {hasPreviousPage: $more}, nodes: ($codex + $extra)},
     reviewThreads: {pageInfo: {hasNextPage: false}, nodes: $threads}}}}}' >"$tmp/pr.json"
   jq -n --argjson runs "$RUNS" '{total_count: ($runs | length), check_runs: $runs}' >"$tmp/checks.json"
 }
@@ -175,5 +176,9 @@ check "escalated, normal review on older sha only" 1 ""
 # Not escalated: light-tier verdict clears.
 COMMENTS=$(review_comment me 0 light)
 check "not escalated, light verdict 0 open on head" 0 ""
+
+# Marker may sit outside the 100-comment window: fail closed, so a bot pass alone doesn't clear.
+MORE_COMMENTS=true
+check "comment window overflow, bot completed on head" 1 "$CODEX_OK"
 
 [ "$fails" -eq 0 ] || exit 1

@@ -29,7 +29,9 @@
 #     post-review.sh, from the account gh is signed in as. The newest such comment naming the
 #     head sha decides: it passes at "Open findings: 0". An optional `Tier:` line records the
 #     tier (defaults to normal). An escalation comment from the viewer marks the PR escalated:
-#     only normal-tier reviews count, and a bot pass alone never clears. The comment has to start
+#     only normal-tier reviews count, and a bot pass alone never clears. Only the newest 100
+#     comments are read, so when older ones are cut off the marker can't be ruled out and the
+#     PR is treated as escalated (fails closed). The comment has to start
 #     with the "Other-family review" line and carry full-sha, Reviewer and Open findings lines,
 #     the shape post-review.sh writes. A comment that names an older sha is stale (a push landed
 #     after the review). Comments from anyone else are ignored, so nobody else can forge a pass.
@@ -93,7 +95,9 @@ def review:
 .data.viewer.login as $me
 | .data.repository.pullRequest
 | .headRefOid as $head
-| ([.comments.nodes[] | select(.author.login == $me and (.body | split("\n")[0]) == "Light review escalated")] | length > 0) as $esc
+| ([.comments.nodes[] | select(.author.login == $me and (.body | split("\n")[0]) == "Light review escalated")] | length > 0) as $marked
+| (.comments.pageInfo.hasPreviousPage == true) as $overflow
+| ($marked or $overflow) as $esc
 | "head\t\(.headRefOid)",
   "state\t\(.state)",
   "draft\t\(.isDraft)",
@@ -122,7 +126,7 @@ query($owner: String!, $name: String!, $num: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $num) {
       state isDraft mergeable mergeStateStatus headRefOid
-      comments(last: 100) { nodes { body author { __typename login } } }
+      comments(last: 100) { pageInfo { hasPreviousPage } nodes { body author { __typename login } } }
       reviewThreads(first: 100) {
         pageInfo { hasNextPage }
         nodes {
