@@ -189,21 +189,16 @@ Runs on each batch PR once CI is green on its head.
 
 **Light tier.** A diff that touches only prose (Markdown, plain text, docs folders, license
 files; not comment-only edits inside code files, which stay on the normal path) and stays under the
-adapter's changed-line limit (50 lines unless the adapter sets another) is light. Everything else keeps the normal path. A light PR gets one review
-from the seat `route` picks for the light review phase, instead of two. That seat must not be the
-family that wrote the batch; if the seat `route` returns (the light row or its Code review
-fallback) is that family, the PR goes through the normal review. The adapter can turn the
-tier off or tighten what counts as light (path patterns, size limit). Escalation is one-way: if the
-light reviewer flags anything beyond wording, or the diff turns out to touch code, the PR goes
-through the normal two-reviewer review. The light review records its verdict through
-`scripts/post-review.sh` like any orchestrator-posted review. `pr-ready.sh` can't tell a light
-review from a normal one, so post the light review's wording findings with the real open count,
-the same as step 2's <open>. It passes only at 0 open. On either escalation trigger (a finding
-beyond wording, or the diff touching code), post the light reviewer's finding (or "diff touches
-code") through `scripts/post-review.sh` with the real open count, at least 1, then run the
-normal review. That open comment holds the PR even if a review bot's summary has completed, until
-the normal review posts its own verdict on the head. The PR can't pass before the normal review
-exists.
+adapter's changed-line limit (50 lines unless the adapter sets another) is light. Everything else
+keeps the normal path. A light PR gets one review from the seat `route` picks for the light review
+phase, instead of two. That seat must not be the family that wrote the batch; if the seat `route`
+returns (the light row or its Code review fallback) is that family, the PR goes through the normal
+review. The adapter can turn the tier off or tighten what counts as light (path patterns, size
+limit). The light review records its verdict through `scripts/post-review.sh` like any
+orchestrator-posted review, with the real open count of its wording findings, the same as step 2's
+<open>. It passes only at 0 open. Escalation is one-way: if the light reviewer flags anything
+beyond wording, or the diff turns out to touch code, post no light verdict and send the PR through
+the normal two-reviewer review below.
 
 1. Two reviewers from different model families where available (except on the light tier):
    - the seat `route` picks for the code review phase, which must not be the family that wrote
