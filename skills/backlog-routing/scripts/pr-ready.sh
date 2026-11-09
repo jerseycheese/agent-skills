@@ -27,10 +27,14 @@
 #     doesn't block: it counts as no Codex review, so the other source can pass.
 #   - Orchestrator comment: the other-family review is a comment the orchestrator posts with
 #     post-review.sh, from the account gh is signed in as. The newest such comment naming the
-#     head sha decides: it passes at "Open findings: 0". The comment has to start with the
-#     "Other-family review" line and carry full-sha, Reviewer and Open findings lines, the shape
-#     post-review.sh writes. A comment that names an older sha is stale (a push landed after the
-#     review). Comments from anyone else are ignored, so nobody else can forge a pass.
+#     head sha decides: it passes at "Open findings: 0". An optional `Tier:` line records the
+#     tier (defaults to normal). An escalation comment from the viewer marks the PR escalated:
+#     only normal-tier reviews count, and a bot pass alone never clears. Only the newest 100
+#     comments are read, so when older ones are cut off the marker can't be ruled out and the
+#     PR is treated as escalated (fails closed). The comment has to start
+#     with the "Other-family review" line and carry full-sha, Reviewer and Open findings lines,
+#     the shape post-review.sh writes. A comment that names an older sha is stale (a push landed
+#     after the review). Comments from anyone else are ignored, so nobody else can forge a pass.
 #     A comment on the head with open findings blocks even when the other source passes.
 # - Findings: every inline thread the --bot started that is still unresolved, whichever source passed.
 #   An outdated one (a push changed the commented lines) is flagged, not dropped: GitHub marks a
@@ -81,24 +85,30 @@ def review:
   | ($l | line("^Reviewed sha: [0-9a-f]{40}[ ]*$")) as $s
   | ($l | line("^Open findings: [0-9]+[ ]*$")) as $o
   | ($l | line("^Reviewer: [^ ].*$")) as $r
+  | ($l | line("^Tier: (light|normal)[ ]*$")) as $t
   | if $l[0] != "Other-family review" or $s == null or $o == null or $r == null then empty
     else {sha: ($s | capture("(?<x>[0-9a-f]{40})").x),
           open: ($o | capture("(?<n>[0-9]+)").n | tonumber),
-          who: ($r | sub("^Reviewer: "; "") | sub("[ ]+$"; ""))}
+          who: ($r | sub("^Reviewer: "; "") | sub("[ ]+$"; "")),
+          tier: (if $t != null then ($t | capture("^Tier: (?<t>light|normal)").t) else "normal" end)}
     end;
 .data.viewer.login as $me
 | .data.repository.pullRequest
 | .headRefOid as $head
+| ([.comments.nodes[] | select(.author.login == $me and (.body | split("\n")[0]) == "Light review escalated")] | length > 0) as $marked
+| (.comments.pageInfo.hasPreviousPage == true) as $overflow
+| ($marked or $overflow) as $esc
 | "head\t\(.headRefOid)",
   "state\t\(.state)",
   "draft\t\(.isDraft)",
   "merge\t\(.mergeable)\t\(.mergeStateStatus)",
+  "escalated\t\($esc)",
   ( [.comments.nodes[] | select(bot and (.body | contains("'"$SUMMARY_MARKER"'")))] | last // null
     | if . == null then "summary\tnone\t-"
       else (.body | split("\n") | map(select(startswith("| ") and contains("**")))) as $rows
         | "summary\t\(if ($rows | length) > 0 and ($rows | all(contains("**Completed**"))) then "complete" elif ($rows | any((contains("**Completed**") or contains("**Failed**")) | not)) then "running" else "failed" end)\t\(([$rows[] | capture("`(?<s>[0-9a-f]{7,40})`") | .s] | last) // "-")"
       end ),
-  ( [.comments.nodes[] | select(.author.login == $me) | review] as $revs
+  ( [.comments.nodes[] | select(.author.login == $me) | review | select(($esc | not) or .tier == "normal")] as $revs
     | ([$revs[] | select(.sha == $head)] | last) as $cur
     | if $cur != null then "review\tcurrent\t\($cur.sha[0:10])\t\($cur.open)\t\($cur.who)"
       elif ($revs | length) > 0 then "review\tstale\t\($revs | last | .sha[0:10])\t0\t-"
@@ -116,7 +126,7 @@ query($owner: String!, $name: String!, $num: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $num) {
       state isDraft mergeable mergeStateStatus headRefOid
-      comments(last: 100) { nodes { body author { __typename login } } }
+      comments(last: 100) { pageInfo { hasPreviousPage } nodes { body author { __typename login } } }
       reviewThreads(first: 100) {
         pageInfo { hasNextPage }
         nodes {
@@ -135,12 +145,14 @@ head_sha="" pr_state="" is_draft="" mergeable="" merge_state="" summary="none" s
 rev_state="none" rev_sha="-" rev_open=0 rev_who="-" review_blocked="" comment_why=""
 findings=""
 finding_count=0
+escalated="false"
 while IFS=$'\t' read -r key f1 f2 f3 f4; do
   case "$key" in
     head) head_sha="$f1" ;;
     state) pr_state="$f1" ;;
     draft) is_draft="$f1" ;;
     merge) mergeable="$f1" merge_state="$f2" ;;
+    escalated) escalated="$f1" ;;
     summary) summary="$f1" summary_sha="$f2" ;;
     review) rev_state="$f1" rev_sha="$f2" rev_open="$f3" rev_who="$f4" ;;
     threads) threads_more="$f1" ;;
@@ -216,7 +228,13 @@ case "$summary" in
       -) bot_why="$bot summary names no sha" ;;
       *)
         case "$head_sha" in
-          "$summary_sha"*) bot_ok=1 ;;
+          "$summary_sha"*)
+            if [ "$escalated" = "true" ]; then
+              bot_why="escalated: needs a normal-tier review"
+            else
+              bot_ok=1
+            fi
+            ;;
           *) bot_why="stale ($bot reviewed ${summary_sha}, head is ${head_sha:0:10})" ;;
         esac
         ;;
@@ -247,7 +265,11 @@ elif [ "$bot_ok" -eq 1 ]; then
 elif [ "$comment_ok" -eq 1 ]; then
   review_out="comment on ${rev_sha} by ${rev_who}, 0 open"
 else
-  review_out="${comment_why:-${bot_why:-not posted}}"
+  if [ "$escalated" = "true" ]; then
+    review_out="${comment_why:-${bot_why:-escalated, no normal review of ${head_sha:0:10}}}"
+  else
+    review_out="${comment_why:-${bot_why:-not posted}}"
+  fi
   ready=0
 fi
 

@@ -194,11 +194,14 @@ keeps the normal path. A light PR gets one review from the seat `route` picks fo
 phase, instead of two. That seat must not be the family that wrote the batch; if the seat `route`
 returns (the light row or its Code review fallback) is that family, the PR goes through the normal
 review. The adapter can turn the tier off or tighten what counts as light (path patterns, size
-limit). The light review records its verdict through `scripts/post-review.sh` like any
+limit). The light review records its verdict through `scripts/post-review.sh --light ...` like any
 orchestrator-posted review, with the real open count of its wording findings, the same as step 2's
 <open>. It passes only at 0 open. Escalation is one-way: if the light reviewer flags anything
-beyond wording, or the diff turns out to touch code, post no light verdict and send the PR through
-the normal two-reviewer review below.
+beyond wording, or the diff turns out to touch code, run `scripts/post-review.sh --escalate <pr>`,
+and from then on `scripts/pr-ready.sh` holds the PR until a normal-tier review of the current head is
+recorded through `scripts/post-review.sh` (without `--light`); a review bot's pass alone never clears
+it, and when the bot is the normal review, the orchestrator posts the verdict once it has verified
+the bot's findings.
 
 1. Two reviewers from different model families where available (except on the light tier):
    - the seat `route` picks for the code review phase, which must not be the family that wrote
@@ -240,7 +243,8 @@ the normal two-reviewer review below.
    its summary with every row Completed on the head sha also passes, a summary still running
    blocks, a failed one (a usage limit, say) counts as no bot review, and its unresolved threads
    are findings. A stale summary or comment (a push landed after it; bots don't re-review on
-   push) or no review at all fails.
+   push) or no review at all fails. On an escalated PR, it holds until a normal-tier review of the
+   current head is recorded (a bot pass alone never clears it).
 3. When the PR is green with no unanswered verified findings, check the merge policy.
    - **The orchestrator merges.** The policy names this kind of PR. Show each condition it lists
      with a tool result, merge pinned to the head you checked (`gh pr merge --match-head-commit

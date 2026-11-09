@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-# post-review.sh <pr-number> <sha> <open-findings> <reviewer>   (findings text on stdin, optional)
+# post-review.sh [--light] <pr-number> <sha> <open-findings> <reviewer>   (findings text on stdin, optional)
+# post-review.sh --escalate <pr-number>
 #
 # Posts the other-family review of a PR as a comment, in the shape pr-ready.sh reads: a
-# `Reviewed sha:` line, an `Open findings:` line and a `Reviewer:` line. Run it after you've
-# verified each finding the reviewer wrote, so the comment holds only the real ones. <open-findings>
-# is how many of those still need a fix. A fix push moves the head and makes the comment stale, so
-# the next round posts a new one; the newest comment naming the head wins.
+# `Reviewed sha:` line, a `Reviewer:` line (with an optional `Tier: light` line) and an
+# `Open findings:` line. Run it after you've verified each finding the reviewer wrote, so
+# the comment holds only the real ones. <open-findings> is how many of those still need a fix.
+# A fix push moves the head and makes the comment stale, so the next round posts a new one;
+# the newest comment naming the head wins.
+#
+# With --escalate, posts the marker comment that escalates a light-tier review to a normal review,
+# requiring a normal-tier review of the current head before pr-ready.sh clears.
 #
 # Narrow on purpose, so an agent can be allowed to run it without being allowed to run arbitrary
 # `gh pr comment`. It refuses unless all of these hold:
 # - the PR is open
-# - <sha>, resolved to a full commit id, is the PR's current head (a review of an older commit
-#   can't pass the gate)
+# - for a review comment: <sha>, resolved to a full commit id, is the PR's current head (a review
+#   of an older commit can't pass the gate)
 #
 # Exit 0: posted. Exit 1: refused. Exit 2: bad argument or gh failure.
 # Run it from a checkout of the repo (or with GH_REPO set). Needs only `gh`, bash 3.2 or newer.
@@ -29,7 +34,29 @@ refuse() {
   exit 1
 }
 
-[ "$#" -eq 4 ] || die "usage: post-review.sh <pr-number> <sha> <open-findings> <reviewer>"
+if [ "${1:-}" = "--escalate" ]; then
+  shift
+  [ "$#" -eq 1 ] || die "usage: post-review.sh --escalate <pr-number>"
+  pr="$1"
+  [[ "$pr" =~ ^[0-9]+$ ]] || die "not a PR number: $pr"
+  pr_state=$(gh pr view "$pr" --json state --jq .state) || die "can't read PR #$pr"
+  [ "$pr_state" = "OPEN" ] || refuse "PR is $pr_state, not OPEN"
+  {
+    echo "Light review escalated"
+    echo
+    echo "Needs a normal-tier review of the current head."
+  } | gh pr comment "$pr" --body-file - >/dev/null || die "couldn't post the comment"
+  echo "posted: light review escalated"
+  exit 0
+fi
+
+tier="normal"
+if [ "${1:-}" = "--light" ]; then
+  tier="light"
+  shift
+fi
+
+[ "$#" -eq 4 ] || die "usage: post-review.sh [--light] <pr-number> <sha> <open-findings> <reviewer>"
 pr="$1"
 sha="$2"
 open="$3"
@@ -56,6 +83,9 @@ fi
   echo
   echo "Reviewed sha: $head_sha"
   echo "Reviewer: $reviewer"
+  if [ "$tier" = "light" ]; then
+    echo "Tier: light"
+  fi
   echo "Open findings: $open"
   if [ -n "$findings" ]; then
     echo
