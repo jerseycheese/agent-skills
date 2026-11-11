@@ -16,6 +16,8 @@ repo's backlog use `prioritize-issues`; for closing out a single chat use `wrap-
 
 - **Read-only.** Never merge, push, delete, archive, commit, or message a session. The report
   ends by offering those actions; the user picks. Step 5 covers archiving once they do.
+  The one write is republishing the user's own project home pages (end of step 4), which only
+  mirror what the sweep already read.
 - **Scope** is one projects root: the folder the user names, else the one their agent
   instructions point to, else ask. If the root has an index file that maps its repos (an
   `AGENTS.md`, `CLAUDE.md`, or README), that map decides what's active, what's dormant, and which
@@ -128,6 +130,13 @@ Want me to <merge X / archive these N sessions / commit the stranded work in Y>?
   UI supports (the Claude Code desktop app takes `[title](#<sessionId>)`); otherwise name the
   session by title so the user can find it.
 - Leave out emojis and the narration of how you gathered it.
+
+### Refresh project home pages
+
+If the user's agent instructions or the root's index name a project home page tool (a script that
+rebuilds one page per project from its git, GitHub and local state), run it after the report and
+republish each built page to the artifact URL it names, as is. Put any page that failed on the
+Skipped line. With no such tool, skip this silently.
 
 ## 5. If the user picks archiving
 
