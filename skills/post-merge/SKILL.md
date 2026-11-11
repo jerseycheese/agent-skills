@@ -166,3 +166,16 @@ Next: #[NUMBER] — [title]
 ```
 
 Keep it tight. The goal is a quick decision, not a planning session.
+
+### 5. Update the project's home page, if it has one
+
+If the user's agent instructions or the projects root's index name a project home page tool and this
+repo has a config for it, point the page at the recommendation:
+
+1. Set the config's next-step field to the recommended issue: its number, one or two plain
+   sentences on what to do and why, the first command to run if there's an obvious one, and where
+   it came from (`post-merge, <date>`).
+2. Run the tool's refresh for this repo and republish the built page to the config's artifact URL.
+
+Skip this silently when there's no tool or no config for the repo. A failed refresh is one line in
+the report, not a reason to stop.
