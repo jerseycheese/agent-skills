@@ -5,6 +5,7 @@ description: >
   sessions where the agent can read them: what's waiting on you, stranded work, what to pick up
   next, and what's dormant. Leads with one next action. Trigger on: "what's going on across my projects", "summarize all project
   activity", "what's stalled", "where is everything".
+model: sonnet
 ---
 
 # project-pulse
