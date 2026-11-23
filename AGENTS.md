@@ -15,6 +15,7 @@ bash .github/scripts/test-pr-ready.sh       # the merge gate in backlog-routing'
 
 ## Rules
 
+- This is a working toolbox first. Don't add a new skill unless someone asks for it in an issue. Fixing and testing the existing skills comes first.
 - Skills stay generic. Other people install them, so nothing in a skill names one person's machine, projects, or private files. Machine-specific values come from the user's own config or a repo adapter.
 - A new skill needs a row in README.md, an entry in `.claude-plugin/marketplace.json`, and at least one line in `evals/triggers.tsv`.
 - Keep a description under 400 characters: what the skill does, when to use it, and three or four trigger phrases.
