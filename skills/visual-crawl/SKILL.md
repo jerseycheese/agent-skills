@@ -269,12 +269,20 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 # Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
 (function() {
-  var fn = /^(inherit|initial|unset|revert|currentcolor|transparent)$/i;
+  var skip = /^(inherit|initial|unset|revert|currentcolor|transparent|canvas|canvastext|linktext|visitedtext|activetext|buttonface|buttontext|buttonborder|field|fieldtext|highlight|highlighttext|selecteditem|selecteditemtext|mark|marktext|graytext|accentcolor|accentcolortext|window|windowtext|windowframe|menu|menutext|background|buttonhighlight|buttonshadow|threedface|threedhighlight|threedshadow|threeddarkshadow|threedlightshadow|infotext|infobackground|scrollbar|appworkspace|activecaption|inactivecaption|captiontext|inactivecaptiontext|inactiveborder|activeborder|highlighttext|graytext)$/i;
   var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
+  var a0 = "(?:0?\\.0*|0)%?";
+  var clear = new RegExp("#(?:[0-9a-f]{3}0|[0-9a-f]{6}00)\\b|\\b(?:rgb|hsl)a?\\((?:[^()\\/]*\\/\\s*" + a0 + "|(?:[^(),]*,){3}\\s*" + a0 + ")\\s*\\)", "gi");
+  var inner = "(?:[^()]|\\((?:[^()]|\\([^()]*\\))*\\))*";
+  var tokFn = new RegExp("\\b(?:rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\\((?=" + inner + "?" + "\\bvar\\()" + inner + "\\)", "gi");
+  function strip(v) {
+    return v.replace(tokFn, " ").replace(/\b(var|url)\((?:[^()]|\([^()]*\))*\)/gi, " ").replace(clear, " ");
+  }
   function lit(v) {
-    if (!v || /var\(|url\(/.test(v)) return false;
+    if (!v) return false;
+    v = strip(v);
     if (fnRe.test(v)) return true;
-    return v.split(/[\s,]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !fn.test(t) && CSS.supports("color", t); });
+    return v.split(/[\s,()]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !skip.test(t) && CSS.supports("color", t); });
   }
   function bad(st) {
     var out = [];
@@ -306,7 +314,12 @@ cat > /tmp/color-check.js << 'JSEOF'
     })(rules);
   }
   Array.from(document.styleSheets).concat(Array.from(document.adoptedStyleSheets || [])).forEach(walk);
-  var utilRe = /\[[^\]]*(#[0-9a-f]{3,8}|\b(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\()[^\]]*\]/i;
+  var utilRe = /\[([^\]]*)\]/g;
+  function util(c) {
+    var m, re = new RegExp(utilRe.source, "g");
+    while ((m = re.exec(c))) if (fnRe.test(strip(m[1]))) return true;
+    return false;
+  }
   Array.from(document.querySelectorAll("*")).forEach(function(el) {
     r.scanned.elements++;
     if (el.shadowRoot) r.scanned.shadowRoots++;
@@ -314,7 +327,7 @@ cat > /tmp/color-check.js << 'JSEOF'
     var b = el.style && bad(el.style);
     if (b && r.inline.length < 20) r.inline.push(tag + " -> " + b.substring(0, 80));
     (el.getAttribute("class") || "").split(/\s+/).forEach(function(c) {
-      if (utilRe.test(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
+      if (util(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
     });
   });
   return r;
@@ -330,6 +343,9 @@ An empty result never means the page is clean; it means this snippet found nothi
 - Non-arbitrary utility classes like `text-red-500`, which map to a palette rather than a literal
 - Colors set by script or in `<canvas>`, and inline `<svg>` color attributes (`fill="#f00"`)
 - Each list stops at 20 entries in stylesheet order, so a list of exactly 20 is truncated, and vendor rules loaded first can push out the app's own
+- Hover, focus, and active states are read only as literal values in their stylesheet rules (the selector appears in the report). Computed colors in those states are not checked here; the Interactive states check below does that.
+
+Cases the snippet is meant to get right, for anyone editing it. Flagged: `#000000`, `rgb(255,255,0)`, `#ffff00`, `rgba(0,0,0,.5)`, `1px solid red`, `linear-gradient(red,blue)`, `background: var(--bg) url(x.png) #fff`, `bg-[#fff]`. Not flagged: `transparent`, any color with zero alpha (`rgba(0,0,0,0)`, `rgba(255,255,255,0)`, `hsla(210,50%,50%,0)`, `rgb(1 2 3 / 0)`, `#0000`, `#fff0`, `#ffffff00`), `var(--c,#fff)`, `hsl(var(--x))`, `rgb(var(--rgb) / 0.5)`, `bg-[hsl(var(--x))]`, `url(#id)`, `Canvas`, `Window`, `bg-[var(--x,#fff)]`. To check an edit, copy the filter functions into node with a stubbed `CSS.supports` and run these.
 
 ##### Empty states
 ```bash
