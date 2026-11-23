@@ -269,12 +269,17 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 # Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
 (function() {
-  var fn = /^(inherit|initial|unset|revert|currentcolor|transparent)$/i;
+  var skip = /^(inherit|initial|unset|revert|currentcolor|transparent|canvas|canvastext|linktext|visitedtext|activetext|buttonface|buttontext|buttonborder|field|fieldtext|highlight|highlighttext|selecteditem|selecteditemtext|mark|marktext|graytext|accentcolor|accentcolortext)$/i;
   var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
+  var clear = /#0{4}(0{4})?\b|\b(rgb|hsl)a?\(\s*0%?(deg)?[\s,]+0%?[\s,]+0%?\s*[,\/]\s*0(\.0*)?%?\s*\)/gi;
+  function strip(v) {
+    return v.replace(/\b(var|url)\((?:[^()]|\([^()]*\))*\)/gi, " ").replace(clear, " ");
+  }
   function lit(v) {
-    if (!v || /var\(|url\(/.test(v)) return false;
+    if (!v) return false;
+    v = strip(v);
     if (fnRe.test(v)) return true;
-    return v.split(/[\s,]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !fn.test(t) && CSS.supports("color", t); });
+    return v.split(/[\s,()]+/).some(function(t) { return /^[a-z]+$/i.test(t) && !skip.test(t) && CSS.supports("color", t); });
   }
   function bad(st) {
     var out = [];
@@ -306,7 +311,12 @@ cat > /tmp/color-check.js << 'JSEOF'
     })(rules);
   }
   Array.from(document.styleSheets).concat(Array.from(document.adoptedStyleSheets || [])).forEach(walk);
-  var utilRe = /\[[^\]]*(#[0-9a-f]{3,8}|\b(rgb|hsl|hwb|lab|lch|oklab|oklch)a?\()[^\]]*\]/i;
+  var utilRe = /\[([^\]]*)\]/g;
+  function util(c) {
+    var m, re = new RegExp(utilRe.source, "g");
+    while ((m = re.exec(c))) if (fnRe.test(strip(m[1]))) return true;
+    return false;
+  }
   Array.from(document.querySelectorAll("*")).forEach(function(el) {
     r.scanned.elements++;
     if (el.shadowRoot) r.scanned.shadowRoots++;
@@ -314,7 +324,7 @@ cat > /tmp/color-check.js << 'JSEOF'
     var b = el.style && bad(el.style);
     if (b && r.inline.length < 20) r.inline.push(tag + " -> " + b.substring(0, 80));
     (el.getAttribute("class") || "").split(/\s+/).forEach(function(c) {
-      if (utilRe.test(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
+      if (util(c) && r.utility.length < 20) r.utility.push(el.tagName + "." + c);
     });
   });
   return r;
