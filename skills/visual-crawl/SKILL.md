@@ -273,8 +273,10 @@ cat > /tmp/color-check.js << 'JSEOF'
   var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
   var a0 = "(?:0?\\.0*|0)%?";
   var clear = new RegExp("#(?:[0-9a-f]{3}0|[0-9a-f]{6}00)\\b|\\b(?:rgb|hsl)a?\\((?:[^()\\/]*\\/\\s*" + a0 + "|(?:[^(),]*,){3}\\s*" + a0 + ")\\s*\\)", "gi");
+  var inner = "(?:[^()]|\\((?:[^()]|\\([^()]*\\))*\\))*";
+  var tokFn = new RegExp("\\b(?:rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\\((?=" + inner + "?" + "\\bvar\\()" + inner + "\\)", "gi");
   function strip(v) {
-    return v.replace(/\b(var|url)\((?:[^()]|\([^()]*\))*\)/gi, " ").replace(clear, " ");
+    return v.replace(tokFn, " ").replace(/\b(var|url)\((?:[^()]|\([^()]*\))*\)/gi, " ").replace(clear, " ");
   }
   function lit(v) {
     if (!v) return false;
@@ -343,7 +345,7 @@ An empty result never means the page is clean; it means this snippet found nothi
 - Each list stops at 20 entries in stylesheet order, so a list of exactly 20 is truncated, and vendor rules loaded first can push out the app's own
 - Hover, focus, and active states are read only as literal values in their stylesheet rules (the selector appears in the report). Computed colors in those states are not checked here; the Interactive states check below does that.
 
-Cases the snippet is meant to get right, for anyone editing it. Flagged: `#000000`, `rgb(255,255,0)`, `#ffff00`, `rgba(0,0,0,.5)`, `1px solid red`, `linear-gradient(red,blue)`, `background: var(--bg) url(x.png) #fff`, `bg-[#fff]`. Not flagged: `transparent`, any color with zero alpha (`rgba(0,0,0,0)`, `rgba(255,255,255,0)`, `hsla(210,50%,50%,0)`, `rgb(1 2 3 / 0)`, `#0000`, `#fff0`, `#ffffff00`), `var(--c,#fff)`, `url(#id)`, `Canvas`, `Window`, `bg-[var(--x,#fff)]`. To check an edit, copy the filter functions into node with a stubbed `CSS.supports` and run these.
+Cases the snippet is meant to get right, for anyone editing it. Flagged: `#000000`, `rgb(255,255,0)`, `#ffff00`, `rgba(0,0,0,.5)`, `1px solid red`, `linear-gradient(red,blue)`, `background: var(--bg) url(x.png) #fff`, `bg-[#fff]`. Not flagged: `transparent`, any color with zero alpha (`rgba(0,0,0,0)`, `rgba(255,255,255,0)`, `hsla(210,50%,50%,0)`, `rgb(1 2 3 / 0)`, `#0000`, `#fff0`, `#ffffff00`), `var(--c,#fff)`, `hsl(var(--x))`, `rgb(var(--rgb) / 0.5)`, `bg-[hsl(var(--x))]`, `url(#id)`, `Canvas`, `Window`, `bg-[var(--x,#fff)]`. To check an edit, copy the filter functions into node with a stubbed `CSS.supports` and run these.
 
 ##### Empty states
 ```bash
