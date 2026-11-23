@@ -269,9 +269,9 @@ bdg dom eval "$(cat /tmp/font-check.js)"
 # Find hardcoded colors in inline styles, stylesheet rules, and arbitrary utility classes
 cat > /tmp/color-check.js << 'JSEOF'
 (function() {
-  var skip = /^(inherit|initial|unset|revert|currentcolor|transparent|canvas|canvastext|linktext|visitedtext|activetext|buttonface|buttontext|buttonborder|field|fieldtext|highlight|highlighttext|selecteditem|selecteditemtext|mark|marktext|graytext|accentcolor|accentcolortext)$/i;
+  var skip = /^(inherit|initial|unset|revert|currentcolor|transparent|canvas|canvastext|linktext|visitedtext|activetext|buttonface|buttontext|buttonborder|field|fieldtext|highlight|highlighttext|selecteditem|selecteditemtext|mark|marktext|graytext|accentcolor|accentcolortext|window|windowtext|windowframe|menu|menutext|background|buttonhighlight|buttonshadow|threedface|threedhighlight|threedshadow|threeddarkshadow|threedlightshadow|infotext|infobackground|scrollbar|appworkspace|activecaption|inactivecaption|captiontext|inactivecaptiontext|inactiveborder|activeborder|highlighttext|graytext)$/i;
   var fnRe = /#[0-9a-f]{3,8}\b|\b(rgb|hsl|hwb|lab|lch|oklab|oklch|color)a?\(/i;
-  var clear = /#0{4}(0{4})?\b|\b(rgb|hsl)a?\(\s*0%?(deg)?[\s,]+0%?[\s,]+0%?\s*[,\/]\s*0(\.0*)?%?\s*\)/gi;
+  var clear = /#0{4}(0{4})?\b|\b(rgb|hsl)a?\(\s*0%?(deg)?[\s,]+0%?[\s,]+0%?\s*[,\/]\s*(0?\.0*|0)%?\s*\)/gi;
   function strip(v) {
     return v.replace(/\b(var|url)\((?:[^()]|\([^()]*\))*\)/gi, " ").replace(clear, " ");
   }
@@ -340,6 +340,9 @@ An empty result never means the page is clean; it means this snippet found nothi
 - Non-arbitrary utility classes like `text-red-500`, which map to a palette rather than a literal
 - Colors set by script or in `<canvas>`, and inline `<svg>` color attributes (`fill="#f00"`)
 - Each list stops at 20 entries in stylesheet order, so a list of exactly 20 is truncated, and vendor rules loaded first can push out the app's own
+- Hover, focus, and active states are read only as literal values in their stylesheet rules (the selector appears in the report). Computed colors in those states are not checked here; the Interactive states check below does that.
+
+Cases the snippet is meant to get right, for anyone editing it. Flagged: `#000000`, `rgba(0,0,0,.5)`, `1px solid red`, `linear-gradient(red,blue)`, `background: var(--bg) url(x.png) #fff`, `bg-[#fff]`. Not flagged: `transparent`, `rgba(0,0,0,0)` and `#0000` in any spelling, `var(--c,#fff)`, `url(#id)`, `Canvas`, `Window`, `bg-[var(--x,#fff)]`. To check an edit, copy the filter functions into node with a stubbed `CSS.supports` and run these.
 
 ##### Empty states
 ```bash
