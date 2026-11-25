@@ -39,6 +39,16 @@ One short file. Plain sentences, in the persona's own terms:
 
 A card describes a player, never a test. "Taps the first card every time" is a card. "Verify the stamina cost table" is a test, and belongs in a unit test.
 
+### Archetypes
+
+`archetypes/` holds generic cards for player types that most games need: skimmer, careful newcomer, button masher, min-maxer, tinkerer, returning player, edge poker, and low vision, keyboard first. Each one ends with a "Specialize" line. To use one, copy it into the adapter's `personas/` folder and fill in that game's own words, controls and budget. Write a new card from scratch only for a player type the archetypes don't cover, and add it here once a second game needs it too.
+
+## Surfaces that need more care
+
+- **A native window.** Drive it with screenshot-based computer use, granted for that one app. Screenshots cost far more than reading a page's text, so if the game exposes its state any other way (a debug server, a log, a runtime inspector), the adapter names it as a measurement the persona may read. Keep dev flags that change play out of the launch command.
+- **A game that calls a paid model.** The adapter sets a spend cap per run and says which mode the run uses. A mock or canned mode costs nothing, but it can't judge the writing, pacing or anything else the model produces, so a mock run reports only on the screens and the rules. A live run notes its spend in the report.
+- **A page that throttles when hidden.** A hidden browser pane can draw a few frames a second, or none at all at zero size. If the game steps its simulation once per frame, the adapter supplies a step pump (a harness control that advances the simulation on a timer) and an explicit window size.
+
 ## Run it
 
 1. **Prepare.** `git fetch`, build the exact commit under test, start it, and note the commit in the report. Check that the game actually renders and runs at speed on the surface the persona will use. A persona on a stalled or throttled page reports the harness, not the game.
