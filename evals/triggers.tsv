@@ -93,3 +93,8 @@ visual-crawl	screenshot visual issues at random breakpoints
 -abstraction-finder	tech debt sweep of this repo
 -band-aid-finder	remove dead code
 -kiss	run an overengineering sweep
+playtest-personas	run the personas against this build before I sit down to playtest
+playtest-personas	who would quit this game in the first five minutes and why
+playtest-personas	play the game as a brand new player who never reads the manual
+-playtest-personas	crawl the site for visual bugs at different breakpoints
+-visual-crawl	run the personas against this build before I sit down to playtest

@@ -44,6 +44,7 @@ Grouped by type. Each links to its `SKILL.md`.
 
 - **[ds-guard](skills/ds-guard/SKILL.md)** — Audit styling changes against the project's design tokens and showcase. Flags hardcoded values, Tailwind utilities, and off-system tokens.
 - **[visual-crawl](skills/visual-crawl/SKILL.md)** — Crawl the running app at random breakpoints, screenshot regressions, check token consistency.
+- **[playtest-personas](skills/playtest-personas/SKILL.md)** — Play a game as blind personas: a fresh subagent per persona reads only the manual and a persona card, plays through the real UI, and reports bugs, confusion, drag and delight. Needs a small per-game adapter.
 - **[visual-qa-pipeline](skills/visual-qa-pipeline/SKILL.md)** — Take a visual crawl all the way to shipped work: triage findings, file Major+ as GitHub issues with screenshots, batch the small stuff, and open fix PRs for mechanical token violations. Schedulable.
 - **[browser-debugger-cli](skills/browser-debugger-cli/SKILL.md)** — Inspect live pages via the Chrome DevTools Protocol through the `bdg` CLI. Token-efficient alternative to a full page snapshot.
 - **[github-screenshot](skills/github-screenshot/SKILL.md)** — Generate GitHub image markdown that renders in private repos (SHA-pinned github.com `?raw=true` links).
