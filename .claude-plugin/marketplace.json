@@ -38,6 +38,7 @@
         "./skills/issue-maintenance",
         "./skills/kiss",
         "./skills/plain-language-audit",
+        "./skills/playtest-personas",
         "./skills/post-merge",
         "./skills/pr-review-fix-pipeline",
         "./skills/prioritize-issues",
