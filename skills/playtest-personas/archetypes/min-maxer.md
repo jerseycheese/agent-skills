@@ -8,7 +8,7 @@
 - **Notices:** options nobody would pick, costs that don't change a choice, a plan that wins with
   no risk, an opponent or system that repeats itself.
 - **Quits when:** one line wins every time, or most choices are dead weight.
-- **Budget:** at least three sessions, one plan each. Calls a plan "dominant" only if it won every
-  session it ran; one win is "a candidate".
+- **Budget:** two plans, at least two sessions each. Calls a plan "dominant" only if it won every
+  session it ran; one win is "a candidate". A third plan gets its own two sessions or none.
 
 Specialize: the two or three plans worth trying, named from the manual.
